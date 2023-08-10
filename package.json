@@ -1,13 +1,14 @@
 {
-  "name": "cron-conveter-u2q",
-  "version": "0.1.2",
+  "name": "cron-converter-u2q",
+  "version": "0.1.4",
   "description": "Converts cron expressions between unix and quartz formats",
   "main": "lib/index.js",
+  "types": "types/index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "jest --no-watchman --coverage"
   },
-  "author": "Rahul <rahu619@gmail.com>",
+  "author": "BitBundler <rahu619@gmail.com>",
   "keywords": [
     "cron",
     "unix",
