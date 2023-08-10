@@ -1,15 +1,15 @@
 export class CronConverterU2Q {
 
-    private readonly delimiter = ' ';
-    private readonly unixExpressionLength = 5;
-    private readonly quartzExpressionLengths = [6, 7];
+    static readonly delimiter = ' ';
+    static readonly unixExpressionLength = 5;
+    static readonly quartzExpressionLengths = [6, 7];
 
     /**
      * Converts a unix cron expression to a quartz cron expression by adding '0' seconds
      * @param unixExpression - the unix expression
      * @returns the corresponding quartz expression
      */
-    public unixToQuartz(unixExpression: string): string {
+    public static unixToQuartz(unixExpression: string): string {
 
         this.validateIfNullOrEmpty(unixExpression);
 
@@ -31,7 +31,7 @@ export class CronConverterU2Q {
      * @param quartzExpression - the quartz expression
      * @returns the corresponding unix expression
      */
-    public quartzToUnix(quartzExpression: string): string {
+    public static quartzToUnix(quartzExpression: string): string {
 
         this.validateIfNullOrEmpty(quartzExpression);
 
@@ -50,7 +50,7 @@ export class CronConverterU2Q {
         return `${min} ${hour} ${unixDom} ${month} ${unixDow}`;
     }
 
-    private validateIfNullOrEmpty(cronExpression: string | undefined | null): void {
+    private static validateIfNullOrEmpty(cronExpression: string | undefined | null): void {
         if (!cronExpression || cronExpression.trim() === '') throw new Error('Empty or null expression');
     }
 
