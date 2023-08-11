@@ -16,11 +16,11 @@ jobs:
           node-version: "18.x"
           registry-url: "https://registry.npmjs.org"
 
-      # Commenting out NPM Publish for now
-      # - name: Publish to NPM
-      #   run: npm publish
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to NPM
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Get package version
         id: pkgver
         run: echo "::set-output name=version::$(node -p "require('./package.json').version")"
@@ -50,6 +50,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`.
-          asset_path: ./your-package-name-${{ steps.pkgver.outputs.version }}.tgz
+          # asset_path: ./your-package-name-${{ steps.pkgver.outputs.version }}.tgz
           asset_name: your-package-name-${{ steps.pkgver.outputs.version }}.tgz
           asset_content_type: application/gzip
