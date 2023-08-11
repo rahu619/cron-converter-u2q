@@ -50,6 +50,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`.
-          # asset_path: ./your-package-name-${{ steps.pkgver.outputs.version }}.tgz
-          asset_name: your-package-name-${{ steps.pkgver.outputs.version }}.tgz
+          asset_path: ./cron-converter-u2q-${{ steps.pkgver.outputs.version }}.tgz
+          asset_name: cron-converter-u2q-${{ steps.pkgver.outputs.version }}.tgz
           asset_content_type: application/gzip
