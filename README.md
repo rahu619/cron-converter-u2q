@@ -28,12 +28,14 @@ Firstly, import the CronConverterU2Q module:
 
 ```javascript
 var cron_converter_u2q = require("cron-converter-u2q");
+
+var c2q = cron_converter_u2q.CronConverterU2Q;
 ```
 
 If you're using ES6 Modules
 
 ```javascript
-import { CronConverterU2QModule } from "cron-converter-u2q";
+import { CronConverterU2QModule as c2q } from "cron-converter-u2q";
 ```
 
 Convert from Unix to Quartz
