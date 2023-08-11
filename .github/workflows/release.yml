@@ -8,11 +8,31 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Setup node.js
+        uses: actions/setup-node@v3
         with:
           node-version: "18.x"
           registry-url: "https://registry.npmjs.org"
-      - run: npm publish
+
+      - name: Publish to NPM
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Get package version
+        id: pkgver
+        run: echo "::set-output name=version::$(node -p "require('./package.json').version")"
+
+        # Creates a .tgz file in your working directory
+      - name: Package NPM tarball
+        run: npm pack
+
+      - name: Attach to GitHub Release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./your-package-name-${{ steps.pkgver.outputs.version }}.tgz
+          asset_name: your-package-name-${{ steps.pkgver.outputs.version }}.tgz
+          asset_content_type: application/gzip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
