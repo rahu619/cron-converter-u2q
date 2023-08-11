@@ -2,11 +2,11 @@
 
 Easily convert cron expressions between Unix and Quartz formats with the `cron-converter-u2q` package
 
+![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/integration.yml/badge.svg?event=push)
+
 ### Features
 
 :arrows_counterclockwise: Two-way conversion: from Unix to Quartz and Quartz to Unix.
-
-:zap: Lightweight.
 
 ### Installation
 
