@@ -1,4 +1,4 @@
-name: CronConverterU2Q CI Workflow
+name: Build
 
 on:
   push:
