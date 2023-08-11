@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --no-watchman --coverage",
-    "lint": "eslint 'src/**/*.{ts,tsx}'"
+    "lint": "npx eslint src/**/*.ts --fix"
   },
   "author": "BitBundler <rahu619@gmail.com>",
   "keywords": [
