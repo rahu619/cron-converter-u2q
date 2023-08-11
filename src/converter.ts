@@ -20,8 +20,8 @@ export class CronConverterU2Q {
         let quartzDom = dom;
         let quartzDow = dow;
 
-        if (dom === '*' && (dow === '*' || dow !== '*')) quartzDom = '?';
-        else if (dom !== '*' && dow === '*') quartzDow = '?';
+        if (dom !== '*' && dow === '*') quartzDow = '?';
+        else if (dom === '*') quartzDom = '?';
 
         return `0 ${min} ${hour} ${quartzDom} ${month} ${quartzDow}`;
     }

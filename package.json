@@ -1,6 +1,6 @@
 {
   "name": "cron-converter-u2q",
-  "version": "0.1.9",
+  "version": "0.1.11-alpha",
   "description": "Converts cron expressions between unix and quartz formats",
   "main": "lib/index.js",
   "types": "types/index.d.ts",
@@ -18,6 +18,8 @@
     "cron-convert"
   ],
   "license": "MIT",
+  "homepage": "https://github.com/rahu619/cron-converter-u2q",
+  "repository": "https://github.com/rahu619/cron-converter-u2q",
   "devDependencies": {
     "@types/jest": "^29.5.3",
     "@types/mocha": "^10.0.1",
