@@ -28,10 +28,13 @@ jobs:
       - name: Package NPM tarball
         run: npm pack
 
+      - name: Debug GitHub event
+        run: echo "${{ toJson(github.event.release) }}"
+
       - name: Attach to GitHub Release
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          # upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./your-package-name-${{ steps.pkgver.outputs.version }}.tgz
           asset_name: your-package-name-${{ steps.pkgver.outputs.version }}.tgz
           asset_content_type: application/gzip

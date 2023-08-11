@@ -1,6 +1,6 @@
 {
   "name": "cron-converter-u2q",
-  "version": "0.1.12-alpha",
+  "version": "0.1.13-alpha",
   "description": "Converts cron expressions between unix and quartz formats",
   "main": "lib/index.js",
   "types": "types/index.d.ts",
