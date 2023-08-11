@@ -15,13 +15,13 @@ Easily convert cron expressions between Unix and Quartz formats with the `cron-c
 Using npm:
 
 ```bash
-npm install cron-converter
+npm install cron-converter-u2q
 ```
 
 Using yarn:
 
 ```bash
-yarn add cron-converter
+yarn add cron-converter-u2q
 ```
 
 ### Usage
