@@ -6,8 +6,8 @@ export class ExpressionHelper {
     public static GetExpressionParts(expression: string): string[] {
         this.validateIfNullOrEmpty(expression);
         const parts = expression.split(this.delimiter).map(part => part.trim());
-        if (this.quartzExpressionLengths.includes(parts.length)) return parts.map(part => part.replace('?', '*'))
-        if (this.unixExpressionLength == parts.length) return parts;
+        if (this.quartzExpressionLengths.includes(parts.length)) return parts.map(part => part.replace('?', '*')) //if quartz, cleanup
+        if (this.unixExpressionLength == parts.length) return parts;// if unix, return as it is
 
         throw new Error(`Invalid cron expression!`)
     }

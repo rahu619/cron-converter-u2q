@@ -33,14 +33,14 @@ export class CronDescriberU2Q {
     }
 
     private static describeMonth(month: string): string {
-        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         if (month === '*') return 'of every month';
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         return `in ${months[Number(month) - 1]}`;
     }
 
     private static describeDayOfWeek(dow: string): string {
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         if (dow === '*') return '';
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         return `on ${days[Number(dow)]}`;
     }
 
