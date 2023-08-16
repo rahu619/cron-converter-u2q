@@ -1,8 +1,6 @@
-export class CronConverterU2Q {
+import { ExpressionHelper as helper } from './helper';
 
-    static readonly delimiter = ' ';
-    static readonly unixExpressionLength = 5;
-    static readonly quartzExpressionLengths = [6, 7];
+export class CronConverterU2Q {
     static readonly everyXUnitsReplacePlaceholder = `%s`
     static readonly quartzEveryXUnitsRegex = /^0\/(\d+)$/; // For handling 0/5 units
     static readonly unixEveryXUnitsRegex = /^\/(\d+)$/; // For handling */5 units
@@ -15,14 +13,16 @@ export class CronConverterU2Q {
      * @returns the corresponding quartz expression
      */
     public static unixToQuartz(unixExpression: string): string {
-
-        this.validateIfNullOrEmpty(unixExpression);
-        const parts = unixExpression.split(this.delimiter);
-        if (parts.length !== this.unixExpressionLength) throw new Error(`Invalid unix cron format`);
-
+        const parts = helper.GetExpressionParts(unixExpression);
         const [min, hour, dom, month, dow] = parts.map(part => this.convertIntervalParts(part));
+
+        // Converting Unix DOW to Quartz DOW
+        let quartzDow = dow.includes(',') ? dow.split(',').map(day => {
+            if (day === '0' || day === '7') return '1';
+            return (parseInt(day, 10) + 1).toString();
+        }).join(',') : dow;
+
         let quartzDom = dom;
-        let quartzDow = dow;
 
         if (dom !== '*' && dow === '*') quartzDow = '?';
         else if (dom === '*') quartzDom = '?';
@@ -36,23 +36,27 @@ export class CronConverterU2Q {
      * @returns the corresponding unix expression
      */
     public static quartzToUnix(quartzExpression: string): string {
-
-        this.validateIfNullOrEmpty(quartzExpression);
-        const parts = quartzExpression.replace('?', '*').split(this.delimiter);
-        if (!this.quartzExpressionLengths.includes(parts.length)) throw new Error(`Invalid quartz cron format`);
-
+        const parts = helper.GetExpressionParts(quartzExpression);
         const [_, min, hour, dom, month, dow] = parts.map(part => this.convertIntervalParts(part, true));
 
-        return `${min} ${hour} ${dom} ${month} ${dow}`;
-    }
 
-    private static validateIfNullOrEmpty(cronExpression: string | undefined | null): void {
-        if (!cronExpression || cronExpression.trim() === '') throw new Error('Empty or null expression');
+        // Converting Quartz DOW to Unix DOW
+        let unixDow = dow.includes(',') ? dow.split(',').map(day => {
+            if (day === '1') return '0';
+            if (day === '?') return '*';
+            return (parseInt(day, 10) - 1).toString();
+        }).join(',') : dow;
+
+        let unixDom = dom;
+
+        // If dow in Quartz was '?', set unixDom to '*'
+        if (dow === '?') unixDom = '*';
+
+
+        return `${min} ${hour} ${unixDom} ${month} ${unixDow}`;
     }
 
     private static convertIntervalParts(part: string, isQuartz = false): string {
-        part = part.trim();
-
         const everyXUnitsPattern = isQuartz ? this.quartzEveryXUnitsRegex : this.unixEveryXUnitsRegex;
         const matches = part.match(everyXUnitsPattern);
         const everyXUnitsReplacePattern = isQuartz ? this.quartzEveryXUnitsReplacePattern : this.unixEveryXUnitsReplacePattern;
