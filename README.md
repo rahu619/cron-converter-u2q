@@ -2,8 +2,8 @@
 
 Easily convert cron expressions between Unix and Quartz formats with the `cron-converter-u2q` package
 
-![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/integration.yml/badge.svg?event=push)
-![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/release.yml/badge.svg?event=push)
+![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/integration.yml/badge.svg?branch=main)
+![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/release.yml/badge.svg?branch=main)
 [![NPM version](https://badge.fury.io/js/cron-converter-u2q.svg)](https://www.npmjs.com/package/cron-converter-u2q)
 
 ### Features
