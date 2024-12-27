@@ -1,14 +1,23 @@
 # cron-converter-u2q
 
-Easily convert cron expressions between Unix and Quartz formats with the `cron-converter-u2q` package
+Easily work with cron expressions using the `cron-converter-u2q` package. Effortlessly convert between Unix and Quartz formats and describe cron schedules in plain language for better understanding and usability.
 
 ![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/integration.yml/badge.svg?branch=main)
-![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/release.yml/badge.svg?branch=main)
+![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/release.yml/badge.svg?event=workflow_dispatch)
 [![NPM version](https://badge.fury.io/js/cron-converter-u2q.svg)](https://www.npmjs.com/package/cron-converter-u2q)
 
 ### Features
 
-:arrows_counterclockwise: Two-way conversion: from Unix to Quartz and Quartz to Unix.
+:arrows_counterclockwise: **Two-way conversion**
+
+Effortlessly convert cron expressions: 
+- From Unix to Quartz 
+- From Quartz to Unix
+
+:memo: **Human-readable Descriptions**
+
+Translate cron schedules into plain, understandable text: 
+- Example:  `*/5 * * * *` -> "Every 5 minutes"
 
 ### Installation
 
@@ -84,7 +93,7 @@ git checkout -b feature/xxxx
 
 ### Development Notice
 
-This package is still under active development. Some methods and features might not be stable yet. We're working diligently to improve and stabilize the package. Any feedback, suggestions, or contributions are highly appreciated!
+Any feedback, suggestions, or contributions are highly appreciated!
 
 ## License
 

@@ -1,55 +1,26 @@
 name: Release
 on:
-  workflow_run:
-    workflows: ["Build"]
-    types:
-      - completed
+  workflow_dispatch: # Manual trigger alone
+
 jobs:
   release:
-    permissions: write-all
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup node.js
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
-          registry-url: "https://registry.npmjs.org"
+          registry-url: "https://registry.npmjs.org/"
 
-      - name: Publish to NPM
+      - name: Publish to npmjs
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: get-npm-version
+      - name: Get npm Package node-version
         id: package-version
         uses: martinbeentjes/npm-get-version-action@v1.3.1
-
-        # Creates a .tgz file in your working directory
-      - name: Package NPM tarball
-        run: npm pack
-
-      # - name: Debug GitHub event
-      #   run: echo "${{ toJson(github.event.release) }}"
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.package-version.outputs.current-version }}
-          release_name: Release ${{ steps.package-version.outputs.current-version }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`.
-          asset_path: ./cron-converter-u2q-${{ steps.package-version.outputs.current-version }}.tgz
-          asset_name: cron-converter-u2q-${{ steps.package-version.outputs.current-version}}.tgz
-          asset_content_type: application/gzip
