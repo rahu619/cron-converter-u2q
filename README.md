@@ -40,17 +40,47 @@ If you're using ES6 Modules
 import { CronConverterU2QModule as c2q } from "cron-converter-u2q";
 ```
 
-Convert from Unix to Quartz
+### Conversion Methods
+
+#### Convert from Unix to Quartz:
 
 ```javascript
 const quartzExpression = c2q.unixToQuartz("5 * * * *");
 ```
 
-Convert from Quartz to Unix
+#### Convert from Quartz to Unix:
 
 ```javascript
 const unixExpression = c2q.quartzToUnix("* */5 * ? * * *");
 ```
+
+### Description Methods
+
+You can now generate human-readable descriptions for Unix and Quartz cron expressions.
+
+#### Describe Unix Cron Expressions:
+
+```javascript
+const description = c2q.describeUnix("5 * * * *");
+console.log(description); // Outputs: "Every 5 minutes"
+```
+
+#### Describe Quartz Cron Expressions:
+
+```javascript
+const description = c2q.describeQuartz("0 0 8 * * ?");
+console.log(description); // Outputs: "At 8 o'clock"
+```
+
+### Contribution Guide
+1. **Fork the repository.**
+2. **Create a feature branch:** 
+```bash 
+git checkout -b feature/xxxx
+```
+3. **Commit changes:** 
+4. **Push the branch:** 
+5. **Open a Pull Request.**
 
 ### Development Notice
 
