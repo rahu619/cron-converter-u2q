@@ -1,10 +1,15 @@
 # cron-converter-u2q
 
-Easily work with cron expressions using the `cron-converter-u2q` package. Effortlessly convert between Unix and Quartz formats and describe cron schedules in plain language for better understanding and usability.
+![Github Repo Stars](https://img.shields.io/github/stars/rahu619/cron-converter-u2q?style=social)
+[![NPM version](https://img.shields.io/npm/v/cron-converter-u2q)](https://www.npmjs.com/package/cron-converter-u2q)
+![GitHub License](https://img.shields.io/github/license/rahu619/cron-converter-u2q?style=plastic)
+![GitHub Build](https://github.com/rahu619/cron-converter-u2q/actions/workflows/integration.yml/badge.svg?branch=main)
+![Github Release](https://github.com/rahu619/cron-converter-u2q/actions/workflows/release.yml/badge.svg?event=workflow_dispatch)
+![Github Top Language](https://img.shields.io/github/languages/top/rahu619/cron-converter-u2q?style=plastic)
 
-![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/integration.yml/badge.svg?branch=main)
-![example event parameter](https://github.com/rahu619/cron-converter-u2q/actions/workflows/release.yml/badge.svg?event=workflow_dispatch)
-[![NPM version](https://badge.fury.io/js/cron-converter-u2q.svg)](https://www.npmjs.com/package/cron-converter-u2q)
+[![https://nodei.co/npm/cron-converter-u2q.png?downloads=true&downloadRank=true&stars=true](https://nodei.co/npm/cron-converter-u2q.png?downloads=true&downloadRank=true&stars=true)](https://www.npmjs.com/package/cron-converter-u2q)
+
+Easily work with cron expressions using the `cron-converter-u2q` package. Effortlessly convert between Unix and Quartz formats and describe cron schedules in plain language.
 
 ### Features
 
@@ -81,20 +86,15 @@ const description = c2q.describeQuartz("0 0 8 * * ?");
 console.log(description); // Outputs: "At 8 o'clock"
 ```
 
-### Contribution Guide
-1. **Fork the repository.**
-2. **Create a feature branch:** 
-```bash 
-git checkout -b feature/xxxx
-```
-3. **Commit changes:** 
-4. **Push the branch:** 
-5. **Open a Pull Request.**
+## License
+This project is licensed under the [MIT License](https://opensource.org/license/mit/)
 
-### Development Notice
 
+### Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
+
+### Support
 Any feedback, suggestions, or contributions are highly appreciated!
 
-## License
-
-This project is licensed under the [MIT License](https://opensource.org/license/mit/)
