@@ -65,26 +65,25 @@ describe("Unix2Quartz Conversion", () => {
     expect(result).toBe("0 */15 * ? * *");
   });
 
-  //Include
-  // test('Last day of every month at 4:45 PM conversion', () => {
-  //     const result = converter.unixToQuartz('45 16 28-31 * *');
-  //     expect(result).toBe('45 16 L * ?');
-  // });
+  test("Last Friday of every month", () => {
+    const result = converter.unixToQuartz("0 0 * * 5L");
+    expect(result).toBe("0 0 0 ? * 5L");
+  });
 
-  // test('Last Sunday of every month at 4:45 PM conversion', () => {
-  //     const result = converter.unixToQuartz('45 16 22-31 * 0');
-  //     expect(result).toBe('45 16 ? * 7L');
-  // });
+  test("Second Wednesday of every month", () => {
+    const result = converter.unixToQuartz("0 0 * * 3#2");
+    expect(result).toBe("0 0 0 ? * 3#2");
+  });
 
-  // test('Second Wednesday of every month at 1:00 AM conversion', () => {
-  //     const result = converter.quartzToUnix('0 1 ? * 3#2');
-  //     expect(result).toBe('Not directly possible without additional logic');
-  // });
+  test("Multiple days of week (list)", () => {
+    const result = converter.unixToQuartz("0 0 * * 1,3,5");
+    expect(result).toBe("0 0 0 ? * 1,3,5");
+  });
 
-  // test('Every last Friday of the month conversion', () => {
-  //     const result = converter.unixToQuartz('0 0 * * 5'); //Find equivalent unix expression
-  //     expect(result).toBe("0 0 0 ? * 5L");
-  // });
+  test("Range of days of week", () => {
+    const result = converter.unixToQuartz("0 0 * * 1-5");
+    expect(result).toBe("0 0 0 ? * 1-5");
+  });
 });
 
 describe("Quartz2Unix Conversion", () => {
@@ -99,7 +98,7 @@ describe("Quartz2Unix Conversion", () => {
   });
 
   test("Every Monday at 12pm conversion", () => {
-    const result = converter.quartzToUnix("0 0 12 ? * 1");
+    const result = converter.quartzToUnix("0 0 12 ? * 2");
     expect(result).toBe("0 12 * * 1");
   });
 
@@ -116,6 +115,26 @@ describe("Quartz2Unix Conversion", () => {
   test("Every last day of the month conversion", () => {
     const result = converter.quartzToUnix("0 59 23 L * ?");
     expect(result).toBe("59 23 L * *");
+  });
+
+  test("Last Friday of every month conversion", () => {
+    const result = converter.quartzToUnix("0 0 0 ? * 5L");
+    expect(result).toBe("0 0 * * 5L");
+  });
+
+  test("Second Wednesday of every month conversion", () => {
+    const result = converter.quartzToUnix("0 0 0 ? * 3#2");
+    expect(result).toBe("0 0 * * 3#2");
+  });
+
+  test("Multiple days of week (list) conversion", () => {
+    const result = converter.quartzToUnix("0 0 0 ? * 1,3,5");
+    expect(result).toBe("0 0 * * 1,3,5");
+  });
+
+  test("Range of days of week conversion", () => {
+    const result = converter.quartzToUnix("0 0 0 ? * 1-5");
+    expect(result).toBe("0 0 * * 1-5");
   });
 });
 
