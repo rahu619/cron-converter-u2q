@@ -1,6 +1,9 @@
 name: Release
 on:
   workflow_dispatch: # Manual trigger alone
+  push:
+    tags:
+      - 'v*' # Trigger on version tags
 
 jobs:
   release:
@@ -15,12 +18,34 @@ jobs:
         with:
           node-version: "18.x"
           registry-url: "https://registry.npmjs.org/"
+          scope: "@rahu619" # Replace with your actual organization name
 
-      - name: Publish to npmjs
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Debug npm auth
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
+          npm whoami
 
-      - name: Get npm Package node-version
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Get npm Package Version
         id: package-version
         uses: martinbeentjes/npm-get-version-action@v1.3.1
+
+      - name: Validate Version
+        run: |
+          if [[ ! ${{ steps.package-version.outputs.version }} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format"
+            exit 1
+          fi
+
+      - name: Publish to npmjs
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
