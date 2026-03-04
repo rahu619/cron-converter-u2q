@@ -17,8 +17,7 @@ jobs:
         with:
           node-version: "20.x"
           registry-url: "https://registry.npmjs.org/"
-          # Note: 'scope' is usually only needed for @org packages. 
-          # Your package 'cron-converter-u2q' appears to be top-level.
+          scope: "@rahu619" # Package is scoped as @rahu619/cron-converter-u2q
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
