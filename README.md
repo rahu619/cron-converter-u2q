@@ -63,7 +63,6 @@ console.log(quartzExpression); // "0 5 * * * ? *"
 // Convert Quartz to Unix
 const unixExpression = CronConverterU2Q.quartzToUnix('0 0 8 * * ?');
 console.log(unixExpression); // "0 8 * * *"
-
 // Get human-readable description
 const description = CronConverterU2Q.describeUnix('*/5 * * * *');
 console.log(description); // "Every 5 minutes"
@@ -77,7 +76,6 @@ console.log(description); // "Every 5 minutes"
 // Unix to Quartz
 CronConverterU2Q.unixToQuartz('0 12 * * *');     // "0 0 12 * * ? *"
 CronConverterU2Q.unixToQuartz('*/15 * * * *');   // "0 */15 * * * ? *"
-
 // Quartz to Unix
 CronConverterU2Q.quartzToUnix('0 0 8 * * ?');    // "0 8 * * *"
 CronConverterU2Q.quartzToUnix('0 */5 * * * ?');  // "*/5 * * * *"
@@ -120,4 +118,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Thanks to all contributors who have helped shape this project
 - Inspired by the need for a simple, reliable cron expression converter
 - Built with TypeScript for better developer experience
+
+## 📖 Specifications
+
+This library's conversion logic is grounded in the following official specifications:
+
+- **POSIX IEEE Std 1003.1** – Defines the standard Unix cron expression format (5 fields: minute, hour, day-of-month, month, day-of-week).
+  [https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html)
+
+- **Quartz Scheduler** – Defines the extended Quartz cron trigger format (6–7 fields: seconds, minute, hour, day-of-month, month, day-of-week, optional year). Notably, exactly one of `day-of-month` or `day-of-week` must be `?` to avoid scheduling conflicts.
+  [https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html](https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html)
 
