@@ -17,6 +17,9 @@
     "cron-expression",
     "cron-convert"
   ],
+  "engines": {
+    "node": "^20 || ^22 || ^24"
+  },
   "license": "MIT",
   "homepage": "https://github.com/rahu619/cron-converter-u2q",
   "repository": {
