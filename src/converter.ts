@@ -20,10 +20,15 @@ export class CronConverterU2Q {
         let quartzDow = this.unixDowToQuartz(dow);
         let quartzDom = dom;
 
-        if (dom !== '*' && dow === '*') quartzDow = '?';
-        else if (dom === '*') quartzDom = '?';
+        // Per Quartz spec, exactly one of DOM or DOW must be '?'
+        // When DOM is '*' and DOW is specific, DOM gets '?'; otherwise DOW gets '?'
+        if (dom === '*' && dow !== '*') {
+            quartzDom = '?';
+        } else {
+            quartzDow = '?';
+        }
 
-        return `0 ${min} ${hour} ${quartzDom} ${month} ${quartzDow}`;
+        return `0 ${min} ${hour} ${quartzDom} ${month} ${quartzDow} *`;
     }
 
     /**
