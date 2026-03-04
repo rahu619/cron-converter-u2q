@@ -1,29 +1,26 @@
 name: Release
 on:
-  workflow_dispatch: # Manual trigger alone
+  workflow_dispatch: # Manual trigger
   push:
     tags:
-      - 'v*' # Trigger on version tags
+      - 'v*' # Trigger on version tags (e.g., v1.0.0)
 
 jobs:
   release:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Updated to v4 for better performance
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4 # Updated to v4
         with:
           node-version: "18.x"
           registry-url: "https://registry.npmjs.org/"
-          scope: "@rahu619" # Replace with your actual organization name
-
-      - name: Debug npm auth
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
-          npm whoami
+          # Note: 'scope' is usually only needed for @org packages. 
+          # Your package 'cron-converter-u2q' appears to be top-level.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install Dependencies
         run: npm ci
@@ -41,7 +38,7 @@ jobs:
       - name: Validate Version
         run: |
           if [[ ! ${{ steps.package-version.outputs.version }} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid version format"
+            echo "Invalid version format: ${{ steps.package-version.outputs.version }}"
             exit 1
           fi
 
