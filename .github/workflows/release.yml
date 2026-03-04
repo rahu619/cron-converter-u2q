@@ -30,6 +30,24 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Validate tag matches package.json version
+        run: |
+          PKG_VERSION=$(npm pkg get version | tr -d '"')
+          if [ -z "$PKG_VERSION" ]; then
+            echo "Error: package.json version is empty."
+            exit 1
+          fi
+
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ -z "$TAG_VERSION" ]; then
+            echo "Error: Git tag (GITHUB_REF_NAME) is empty."
+            exit 1
+          fi
+
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "Error: Version mismatch between package.json ($PKG_VERSION) and tag ($TAG_VERSION)."
+            exit 1
+          fi
       - name: Publish to npmjs
         run: npm publish --access public
         env:
