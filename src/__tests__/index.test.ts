@@ -290,6 +290,49 @@ describe("Converter: error handling", () => {
   test("quartzToUnix throws on 8-field expression", () => {
     expect(() => converter.quartzToUnix("* * * * * * * *")).toThrow();
   });
+
+  test("unixToQuartz throws when both DOM and DOW are specific", () => {
+    expect(() => converter.unixToQuartz("0 0 15 * 1")).toThrow("Quartz cron does not support specifying both Day of Month and Day of Week");
+  });
+});
+
+describe("Converter: deduplication of DOW values", () => {
+  test("unixToQuartz deduplicates redundant DOW values (e.g. 0,7)", () => {
+    expect(converter.unixToQuartz("0 0 * * 0,7")).toBe("0 0 0 ? * 1 *");
+  });
+
+  test("quartzToUnix deduplicates redundant DOW values (e.g. 2,2)", () => {
+    expect(converter.quartzToUnix("0 0 0 ? * 2,2")).toBe("0 0 * * 1");
+  });
+});
+
+describe("ExpressionHelper whitespace robustness", () => {
+  test("handles multiple spaces, tabs, and leading/trailing whitespace correctly", () => {
+    expect(converter.unixToQuartz("  0   12   *   *   *  ")).toBe("0 0 12 * * * *");
+    expect(converter.unixToQuartz("0\t12\t*\t*\t*")).toBe("0 0 12 * * * *");
+  });
+});
+
+describe("Converter: optional year parameter", () => {
+  test("unixToQuartz accepts specific year", () => {
+    expect(converter.unixToQuartz("0 12 * * 1", "2026")).toBe("0 0 12 ? * 2 2026");
+  });
+
+  test("unixToQuartz throws on invalid specific year", () => {
+    expect(() => converter.unixToQuartz("0 12 * * 1", "invalid_year")).toThrow();
+    expect(() => converter.unixToQuartz("0 12 * * 1", "1969")).toThrow(); // out of range
+  });
+
+  test("round-tripping Quartz -> Unix -> Quartz with specific years", () => {
+    const originalQuartz = "0 0 12 ? * 2 2026";
+    const unix = converter.quartzToUnix(originalQuartz); // "0 12 * * 1"
+    
+    const parts = originalQuartz.split(/\s+/);
+    const year = parts.length === 7 ? parts[6] : "*";
+    
+    const reconstructedQuartz = converter.unixToQuartz(unix, year);
+    expect(reconstructedQuartz).toBe(originalQuartz);
+  });
 });
 
 describe("Validator Checks", () => {

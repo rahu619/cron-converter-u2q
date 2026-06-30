@@ -1,6 +1,6 @@
 declare module 'cron-converter-u2q' {
     export class CronConverterU2Q {
-        static unixToQuartz(unixExpression: string): string;
+        static unixToQuartz(unixExpression: string, year?: string): string;
         static quartzToUnix(quartzExpression: string): string;
     }
 

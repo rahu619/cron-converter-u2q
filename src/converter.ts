@@ -7,10 +7,10 @@ export class CronConverterU2Q {
      * @param unixExpression - the unix expression
      * @returns the corresponding quartz expression
      */
-    public static unixToQuartz(unixExpression: string): string {
+    public static unixToQuartz(unixExpression: string, year = '*'): string {
         CronValidatorU2Q.validateUnix(unixExpression);
         const parts = helper.GetExpressionParts(unixExpression);
-        const [min, hour, dom, month, dow] = parts.map(part => this.convertIntervalParts(part));
+        const [min, hour, dom, month, dow] = parts;
 
         // Enhanced DOW conversion: handle lists, ranges, and special cases
         let quartzDow = this.unixDowToQuartz(dow);
@@ -22,9 +22,15 @@ export class CronConverterU2Q {
             quartzDom = '?';
         } else if (dom !== '*' && dow === '*') {
             quartzDow = '?';
+        } else if (dom !== '*' && dow !== '*') {
+            throw new Error("Quartz cron does not support specifying both Day of Month and Day of Week");
         }
 
-        return `0 ${min} ${hour} ${quartzDom} ${month} ${quartzDow} *`;
+        const result = `0 ${min} ${hour} ${quartzDom} ${month} ${quartzDow} ${year}`;
+        if (year !== '*') {
+            CronValidatorU2Q.validateQuartz(result);
+        }
+        return result;
     }
 
     /**
@@ -35,7 +41,7 @@ export class CronConverterU2Q {
     public static quartzToUnix(quartzExpression: string): string {
         CronValidatorU2Q.validateQuartz(quartzExpression);
         const parts = helper.GetExpressionParts(quartzExpression);
-        const [_, min, hour, dom, month, dow] = parts.map(part => this.convertIntervalParts(part, true));
+        const [_, min, hour, dom, month, dow] = parts.map(part => part.replace(/^0\/(\d+)$/, '*/$1'));
 
         if (dom.includes('L') || dom.includes('W')) {
             throw new Error("Unix cron does not support 'L' or 'W' in Day of Month");
@@ -52,24 +58,16 @@ export class CronConverterU2Q {
     }
 
     /**
-     * Converts interval parts for both Unix and Quartz expressions.
-     * In both directions, normalises step notation to the Unix `*\/N` format.
-     */
-    private static convertIntervalParts(part: string, isQuartz = false): string {
-        if (isQuartz) {
-            return part.replace(/^0\/(\d+)$/, '*/$1');
-        }
-        return part;
-    }
-
-    /**
      * Converts Unix DOW to Quartz DOW, supporting lists, ranges, and special cases.
      * Unix: 0=Sun, 1=Mon, ..., 6=Sat, 7=Sun(alias)
      * Quartz: 1=Sun, 2=Mon, ..., 7=Sat
      */
     private static unixDowToQuartz(dow: string): string {
         if (dow === '*' || dow === '?') return dow;
-        if (dow.includes(',')) return dow.split(',').map(d => this.unixDowToQuartz(d)).join(',');
+        if (dow.includes(',')) {
+            const mapped = dow.split(',').map(d => this.unixDowToQuartz(d));
+            return Array.from(new Set(mapped)).join(',');
+        }
         if (dow.includes('-')) return dow.split('-').map(d => this.unixDowToQuartz(d)).join('-');
         if (dow.endsWith('L')) {
             const day = dow.slice(0, -1);
@@ -94,7 +92,10 @@ export class CronConverterU2Q {
         if (dow === '*' || dow === '?') return dow === '?' ? '*' : dow;
 
         // Split compound expressions so each element is converted individually
-        if (dow.includes(',')) return dow.split(',').map(d => this.quartzDowToUnix(d)).join(',');
+        if (dow.includes(',')) {
+            const mapped = dow.split(',').map(d => this.quartzDowToUnix(d));
+            return Array.from(new Set(mapped)).join(',');
+        }
         if (dow.includes('-')) return dow.split('-').map(d => this.quartzDowToUnix(d)).join('-');
 
         // Last (L) — convert the numeric day part, preserve L suffix
