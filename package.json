@@ -1,5 +1,5 @@
 {
-  "name": "@rahu619/cron-converter-u2q",
+  "name": "cron-converter-u2q",
   "version": "1.3.0",
   "description": "Converts cron expressions between unix and quartz formats",
   "main": "lib/index.js",

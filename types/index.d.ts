@@ -1,4 +1,4 @@
-declare module '@rahu619/cron-converter-u2q' {
+declare module 'cron-converter-u2q' {
     export class CronConverterU2Q {
         static unixToQuartz(unixExpression: string): string;
         static quartzToUnix(quartzExpression: string): string;
