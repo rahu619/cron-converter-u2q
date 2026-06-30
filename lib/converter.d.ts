@@ -4,18 +4,13 @@ export declare class CronConverterU2Q {
      * @param unixExpression - the unix expression
      * @returns the corresponding quartz expression
      */
-    static unixToQuartz(unixExpression: string): string;
+    static unixToQuartz(unixExpression: string, year?: string): string;
     /**
      * Converts a quartz cron expression to a unix cron expression
      * @param quartzExpression - the quartz expression
      * @returns the corresponding unix expression
      */
     static quartzToUnix(quartzExpression: string): string;
-    /**
-     * Converts interval parts for both Unix and Quartz expressions.
-     * In both directions, normalises step notation to the Unix `*\/N` format.
-     */
-    private static convertIntervalParts;
     /**
      * Converts Unix DOW to Quartz DOW, supporting lists, ranges, and special cases.
      * Unix: 0=Sun, 1=Mon, ..., 6=Sat, 7=Sun(alias)
