@@ -1,14 +1,14 @@
 # cron-converter-u2q
 
 [![Github Repo Stars](https://img.shields.io/github/stars/rahu619/cron-converter-u2q?style=social)](https://github.com/rahu619/cron-converter-u2q)
-[![NPM version](https://img.shields.io/npm/v/@rahu619/cron-converter-u2q)](https://www.npmjs.com/package/@rahu619/cron-converter-u2q)
+[![NPM version](https://img.shields.io/npm/v/cron-converter-u2q)](https://www.npmjs.com/package/cron-converter-u2q)
 [![GitHub License](https://img.shields.io/github/license/rahu619/cron-converter-u2q?style=plastic)](LICENSE)
 [![GitHub Build](https://github.com/rahu619/cron-converter-u2q/actions/workflows/integration.yml/badge.svg?branch=main)](https://github.com/rahu619/cron-converter-u2q/actions)
 [![Github Release](https://github.com/rahu619/cron-converter-u2q/actions/workflows/release.yml/badge.svg?event=workflow_dispatch)](https://github.com/rahu619/cron-converter-u2q/actions)
 [![Github Top Language](https://img.shields.io/github/languages/top/rahu619/cron-converter-u2q?style=plastic)](https://www.typescriptlang.org/)
-[![npm downloads](https://img.shields.io/npm/dm/@rahu619/cron-converter-u2q)](https://www.npmjs.com/package/@rahu619/cron-converter-u2q)
+[![npm downloads](https://img.shields.io/npm/dm/cron-converter-u2q)](https://www.npmjs.com/package/cron-converter-u2q)
 
-[![https://nodei.co/npm/@rahu619/cron-converter-u2q.png?downloads=true&downloadRank=true&stars=true](https://nodei.co/npm/@rahu619/cron-converter-u2q.png?downloads=true&downloadRank=true&stars=true)](https://www.npmjs.com/package/@rahu619/cron-converter-u2q)
+[![https://nodei.co/npm/cron-converter-u2q.png?downloads=true&downloadRank=true&stars=true](https://nodei.co/npm/cron-converter-u2q.png?downloads=true&downloadRank=true&stars=true)](https://www.npmjs.com/package/cron-converter-u2q)
 
 A powerful TypeScript library for working with cron expressions. Effortlessly convert between Unix and Quartz formats, generate human-readable descriptions, and validate cron expressions with ease.
 
@@ -42,19 +42,19 @@ A powerful TypeScript library for working with cron expressions. Effortlessly co
 
 ```bash
 # Using npm
-npm install @rahu619/cron-converter-u2q
+npm install cron-converter-u2q
 
 # Using yarn
-yarn add @rahu619/cron-converter-u2q
+yarn add cron-converter-u2q
 
 # Using pnpm
-pnpm add @rahu619/cron-converter-u2q
+pnpm add cron-converter-u2q
 ```
 
 ## 🚀 Quick Start
 
 ```typescript
-import { CronConverterU2Q, CronDescriberU2Q } from '@rahu619/cron-converter-u2q';
+import { CronConverterU2Q, CronDescriberU2Q } from 'cron-converter-u2q';
 
 // Convert Unix to Quartz
 const quartzExpression = CronConverterU2Q.unixToQuartz('5 * * * *');
