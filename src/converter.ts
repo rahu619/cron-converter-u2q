@@ -1,18 +1,14 @@
 import { ExpressionHelper as helper } from './helper';
+import { CronValidatorU2Q } from './validator';
 
 export class CronConverterU2Q {
-    static readonly everyXUnitsReplacePlaceholder = `%s`
-    static readonly quartzEveryXUnitsRegex = /^0\/(\d+)$/; // For handling 0/5 units
-    static readonly unixEveryXUnitsRegex = /^\*\/(\d+)$/; // For handling */5 units
-    static readonly quartzEveryXUnitsReplacePattern = `0/${this.everyXUnitsReplacePlaceholder}`;
-    static readonly unixEveryXUnitsReplacePattern = `*/${this.everyXUnitsReplacePlaceholder}`;
-
     /**
      * Converts a unix cron expression to a quartz cron expression by adding '0' seconds
      * @param unixExpression - the unix expression
      * @returns the corresponding quartz expression
      */
     public static unixToQuartz(unixExpression: string): string {
+        CronValidatorU2Q.validateUnix(unixExpression);
         const parts = helper.GetExpressionParts(unixExpression);
         const [min, hour, dom, month, dow] = parts.map(part => this.convertIntervalParts(part));
 
@@ -24,7 +20,7 @@ export class CronConverterU2Q {
         // When DOM is '*' and DOW is specific, DOM gets '?'; otherwise DOW gets '?'
         if (dom === '*' && dow !== '*') {
             quartzDom = '?';
-        } else {
+        } else if (dom !== '*' && dow === '*') {
             quartzDow = '?';
         }
 
@@ -37,39 +33,44 @@ export class CronConverterU2Q {
      * @returns the corresponding unix expression
      */
     public static quartzToUnix(quartzExpression: string): string {
+        CronValidatorU2Q.validateQuartz(quartzExpression);
         const parts = helper.GetExpressionParts(quartzExpression);
         const [_, min, hour, dom, month, dow] = parts.map(part => this.convertIntervalParts(part, true));
 
+        if (dom.includes('L') || dom.includes('W')) {
+            throw new Error("Unix cron does not support 'L' or 'W' in Day of Month");
+        }
+        if (dow.includes('L') || dow.includes('#')) {
+            throw new Error("Unix cron does not support 'L' or '#' in Day of Week");
+        }
+
         // Enhanced DOW conversion: handle lists, ranges, and special cases
         let unixDow = this.quartzDowToUnix(dow);
-        let unixDom = dom;
-
-        // If dow in Quartz was '?', set unixDom to '*'
-        if (dow === '?') unixDom = '*';
+        let unixDom = dom === '?' ? '*' : dom;
 
         return `${min} ${hour} ${unixDom} ${month} ${unixDow}`;
     }
 
     /**
      * Converts interval parts for both Unix and Quartz expressions.
+     * In both directions, normalises step notation to the Unix `*\/N` format.
      */
     private static convertIntervalParts(part: string, isQuartz = false): string {
-        const everyXUnitsPattern = isQuartz ? this.quartzEveryXUnitsRegex : this.unixEveryXUnitsRegex;
-        const matches = part.match(everyXUnitsPattern);
-        const everyXUnitsReplacePattern = isQuartz ? this.quartzEveryXUnitsReplacePattern : this.unixEveryXUnitsReplacePattern;
-
-        if (matches) return `${everyXUnitsReplacePattern.replace(this.everyXUnitsReplacePlaceholder, matches[1])}`;
-
+        if (isQuartz) {
+            return part.replace(/^0\/(\d+)$/, '*/$1');
+        }
         return part;
     }
 
     /**
      * Converts Unix DOW to Quartz DOW, supporting lists, ranges, and special cases.
+     * Unix: 0=Sun, 1=Mon, ..., 6=Sat, 7=Sun(alias)
+     * Quartz: 1=Sun, 2=Mon, ..., 7=Sat
      */
     private static unixDowToQuartz(dow: string): string {
         if (dow === '*' || dow === '?') return dow;
-        if (dow.includes(',')) return dow.split(',').map(this.unixDowToQuartz).join(',');
-        if (dow.includes('-')) return dow.split('-').map(this.unixDowToQuartz).join('-');
+        if (dow.includes(',')) return dow.split(',').map(d => this.unixDowToQuartz(d)).join(',');
+        if (dow.includes('-')) return dow.split('-').map(d => this.unixDowToQuartz(d)).join('-');
         if (dow.endsWith('L')) {
             const day = dow.slice(0, -1);
             return `${this.unixDowToQuartz(day)}L`;
@@ -79,35 +80,39 @@ export class CronConverterU2Q {
             return `${this.unixDowToQuartz(day)}#${nth}`;
         }
         if (dow === '0' || dow === '7') return '1'; // Sunday
-        // For 1-6 (Monday-Saturday), keep as is
+        const num = parseInt(dow, 10);
+        if (!isNaN(num) && num >= 1 && num <= 6) return (num + 1).toString(); // Mon(1)→2 … Sat(6)→7
         return dow;
     }
 
     /**
      * Converts Quartz DOW to Unix DOW, supporting lists, ranges, and special cases.
+     * Quartz: 1=Sun, 2=Mon, ..., 7=Sat
+     * Unix: 0=Sun, 1=Mon, ..., 6=Sat
      */
-    private static quartzDowToUnix(dow: string): string {
+    public static quartzDowToUnix(dow: string): string {
         if (dow === '*' || dow === '?') return dow === '?' ? '*' : dow;
 
-        // Last (L) - do not map the numeric part, just return as is
+        // Split compound expressions so each element is converted individually
+        if (dow.includes(',')) return dow.split(',').map(d => this.quartzDowToUnix(d)).join(',');
+        if (dow.includes('-')) return dow.split('-').map(d => this.quartzDowToUnix(d)).join('-');
+
+        // Last (L) — convert the numeric day part, preserve L suffix
         if (dow.endsWith('L')) {
-            return dow;
+            const day = dow.slice(0, -1);
+            return `${this.quartzDowToUnix(day)}L`;
         }
 
-        // Nth (#) - do not map the numeric part, just return as is
+        // Nth weekday (#) — convert the numeric day part, preserve #N
         if (dow.includes('#')) {
-            return dow;
-        }
-
-        // For lists and ranges, do not map, just return as is
-        if (dow.includes(',') || dow.includes('-')) {
-            return dow;
+            const [day, nth] = dow.split('#');
+            return `${this.quartzDowToUnix(day)}#${nth}`;
         }
 
         // Numeric mapping
         if (dow === '1') return '0'; // Sunday
         const num = parseInt(dow, 10);
-        if (!isNaN(num) && num >= 2 && num <= 7) return (num - 1).toString();
+        if (!isNaN(num) && num >= 2 && num <= 7) return (num - 1).toString(); // Mon(2)→1 … Sat(7)→6
 
         return dow;
     }
