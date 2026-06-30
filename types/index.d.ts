@@ -8,4 +8,11 @@ declare module '@rahu619/cron-converter-u2q' {
         static describeUnix(unixExpression: string): string;
         static describeQuartz(quartzExpression: string): string;
     }
+
+    export class CronValidatorU2Q {
+        static validateUnix(expression: string): void;
+        static validateQuartz(expression: string): void;
+        static isValidUnix(expression: string): boolean;
+        static isValidQuartz(expression: string): boolean;
+    }
 }
