@@ -21,7 +21,7 @@ A lightweight, zero-dependency TypeScript utility to convert, validate, and desc
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install cron-converter-u2q
@@ -33,7 +33,7 @@ pnpm add cron-converter-u2q
 
 ---
 
-## 🚀 Usage
+## Usage
 
 ### 1. Two-Way Conversion
 Convert seamlessly between formats. Wildcards and aliases are normalized automatically.
@@ -82,12 +82,12 @@ CronDescriberU2Q.describeQuartz('0 0 0 L * ?');        // "At 0 o'clock on the l
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to open issues or submit Pull Requests.
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
