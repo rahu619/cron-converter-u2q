@@ -9,7 +9,7 @@ A lightweight, zero-dependency TypeScript utility to convert, validate, and desc
 
 ---
 
-## 💡 Unix vs. Quartz Cron
+## Unix vs. Quartz Cron
 
 | Specification | Fields | Format | Support |
 | :--- | :--- | :--- | :--- |
