@@ -1,17 +1,57 @@
 # cron-converter-u2q
 
-A TypeScript library to convert, validate, and describe cron expressions between Unix and Quartz formats. It has zero external dependencies and is fully typed.
+A TypeScript library to convert, validate, and describe cron expressions between Unix and Quartz formats. It has zero external dependencies, is fully typed, and is designed for Node.js and browser environments.
 
-## Features
+## What is cron-converter-u2q?
 
-- **Bidirectional Conversion**: Translate expressions between Unix (5 fields) and Quartz (6 or 7 fields) standards.
-- **Strict Validation**: Perform boundary checks and detect syntax anomalies (e.g. invalid step values, out-of-bounds ranges).
-- **Human-Readable Descriptions**: Generate English text representations of Unix and Quartz expressions.
-- **Zero Dependencies**: Lightweight footprint, compatible with Node.js and browser environments.
+`cron-converter-u2q` provides bidirectional translation between standard 5-field Unix cron schedules and 6-to-7-field Quartz cron schedules. Additionally, the library includes a built-in validator with descriptive boundary-checking and an English-expression generator to describe schedules in natural language.
+
+## Key Features
+
+* **Bidirectional Translation**: Seamless conversion between POSIX-compliant Unix expressions and Quartz-compliant expressions.
+* **Granular Validation**: Detects and reports precise syntax errors (e.g., out-of-range bounds, step-value limits).
+* **Natural Language Describer**: Renders cron schedules into clear, readable English sentences.
+* **Lightweight Footprint**: Compiled with zero external runtime dependencies.
+
+## Installation
+
+Install the package via your preferred package manager:
+
+### npm
+```bash
+npm install cron-converter-u2q
+```
+
+### Yarn
+```bash
+yarn add cron-converter-u2q
+```
+
+### pnpm
+```bash
+pnpm add cron-converter-u2q
+```
+
+## Quick Start
+
+```typescript
+import { CronConverterU2Q, CronValidatorU2Q, CronDescriberU2Q } from 'cron-converter-u2q';
+
+// Convert Unix to Quartz
+const quartz = CronConverterU2Q.unixToQuartz('*/15 * * * *'); 
+console.log(quartz); // "0 */15 * * * * *"
+
+// Describe Quartz cron in plain English
+const description = CronDescriberU2Q.describeQuartz('0 0 12 ? * 2#1 *');
+console.log(description); // "At 12:00 PM on the first Monday of every month"
+
+// Validate expressions
+const isValid = CronValidatorU2Q.isValidUnix('60 * * * *'); // false
+```
 
 ## Understanding Unix vs. Quartz Cron
 
-Cron syntax has evolved from local POSIX system scheduling to enterprise cloud workflow engines. This library addresses the incompatibility between the two most common formats:
+Cron specifications differ based on environment requirements. This library handles the mapping and behavioral nuances between POSIX and Quartz standards:
 
 ### Unix Cron (POSIX Standard)
 Unix cron is the classic 5-field format used by Unix/Linux system daemons (`crontab`):
@@ -52,88 +92,60 @@ Quartz cron originates from the Java ecosystem and is widely adopted by modern c
 
 ---
 
-## Installation
+## API Reference
 
-```bash
-npm install cron-converter-u2q
-```
+### Conversion
 
-## API Usage
-
-### 1. Bidirectional Conversion
-
-The `CronConverterU2Q` class handles conversion. During Unix -> Quartz conversion, it prepends `0` for seconds, appends `*` for the year, and maps day-of-week indices.
+`CronConverterU2Q` provides static methods for bidirectional conversion. During Unix -> Quartz conversion, it prepends `0` for seconds, appends `*` for the year, and maps day-of-week indices.
 
 ```typescript
 import { CronConverterU2Q } from 'cron-converter-u2q';
 
-// Unix to Quartz
-const quartz1 = CronConverterU2Q.unixToQuartz('*/15 * * * *');   // "0 */15 * * * * *"
-const quartz2 = CronConverterU2Q.unixToQuartz('0 12 * * 1');     // "0 0 12 ? * 2 *"
+// Unix -> Quartz
+CronConverterU2Q.unixToQuartz('*/15 * * * *');   // "0 */15 * * * * *"
+CronConverterU2Q.unixToQuartz('0 12 * * 1');     // "0 0 12 ? * 2 *"
 
-// Quartz to Unix (seconds and years are stripped)
-const unix1 = CronConverterU2Q.quartzToUnix('0 0 8 * * ?');    // "0 8 * * *"
-const unix2 = CronConverterU2Q.quartzToUnix('0 */5 * ? * 2');  // "*/5 * * * 1"
+// Quartz -> Unix (seconds and years are stripped)
+CronConverterU2Q.quartzToUnix('0 0 8 * * ?');    // "0 8 * * *"
+CronConverterU2Q.quartzToUnix('0 */5 * ? * 2');  // "*/5 * * * 1"
 ```
 
-### 2. Validation
+### Validation
 
-`CronValidatorU2Q` provides both assertion methods (which throw detailed errors) and boolean checks.
+`CronValidatorU2Q` handles syntax validation.
 
 ```typescript
 import { CronValidatorU2Q } from 'cron-converter-u2q';
 
-// Throws detailed validation errors
+// validateUnix / validateQuartz will throw detailed validation errors if invalid
 try {
   CronValidatorU2Q.validateUnix('60 * * * *');
 } catch (err) {
   // Throws: "Value 60 is out of range (0-59) for Minute"
 }
 
-try {
-  CronValidatorU2Q.validateQuartz('0 */0 * ? * *');
-} catch (err) {
-  // Throws: "Invalid step value in Minute: 0"
-}
-
-// Boolean validation helpers
-const isValidUnix = CronValidatorU2Q.isValidUnix('*/5 * * * *'); // true
-const isValidQuartz = CronValidatorU2Q.isValidQuartz('0 0 12 * * * *'); // true
+// isValidUnix / isValidQuartz return boolean values
+const isValid = CronValidatorU2Q.isValidUnix('*/5 * * * *'); // true
 ```
 
-### 3. Expression Description
+### Description
 
 `CronDescriberU2Q` translates expressions into natural English descriptions.
 
 ```typescript
 import { CronDescriberU2Q } from 'cron-converter-u2q';
 
-// Unix
-const descUnix1 = CronDescriberU2Q.describeUnix('*/15 * * * *'); // "Every 15 minutes"
-const descUnix2 = CronDescriberU2Q.describeUnix('0 12 1-5 * *'); // "At 12 o'clock from the 1st to the 5th of the month"
+// Describe Unix schedules
+CronDescriberU2Q.describeUnix('*/15 * * * *'); // "Every 15 minutes"
 
-// Quartz
-const descQuartz1 = CronDescriberU2Q.describeQuartz('0 0 8,12 ? * 2-6 *'); // "At 8 and 12 o'clock from Monday to Friday"
-const descQuartz2 = CronDescriberU2Q.describeQuartz('0 0 0 L * ?');        // "At 0 o'clock on the last day of the month"
+// Describe Quartz schedules
+CronDescriberU2Q.describeQuartz('0 0 0 L * ?'); // "At 0 o'clock on the last day of the month"
 ```
 
-## Development
+## Feedback & Contributing
 
-### Building
-```bash
-npm run build
-```
-
-### Testing
-```bash
-npm test
-```
-
-### Linting
-```bash
-npm run lint
-```
+Feedback, issues, and pull requests are welcome. If you find a bug or have a feature request, please open a GitHub issue.
 
 ## License
 
-MIT
+This project is licensed under the [MIT License](LICENSE).
