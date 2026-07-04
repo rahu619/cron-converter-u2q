@@ -1,5 +1,13 @@
 # cron-converter-u2q
 
+[![npm version](https://img.shields.io/npm/v/cron-converter-u2q)](https://www.npmjs.com/package/cron-converter-u2q)
+[![npm downloads](https://img.shields.io/npm/dm/cron-converter-u2q)](https://www.npmjs.com/package/cron-converter-u2q)
+[![npm unpacked size](https://img.shields.io/npm/unpacked-size/cron-converter-u2q)](https://www.npmjs.com/package/cron-converter-u2q)
+[![Build](https://github.com/rahu619/cron-converter-u2q/actions/workflows/integration.yml/badge.svg)](https://github.com/rahu619/cron-converter-u2q/actions/workflows/integration.yml)
+[![License: MIT](https://img.shields.io/npm/l/cron-converter-u2q)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](package.json)
+
 A TypeScript library to convert, validate, and describe cron expressions between Unix and Quartz formats. It has zero external dependencies, is fully typed, and is designed for Node.js and browser environments.
 
 ## What is cron-converter-u2q?
