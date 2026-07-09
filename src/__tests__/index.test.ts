@@ -150,12 +150,12 @@ describe("Description", () => {
 
   test("Describe daily at 8:00 AM (Unix)", () => {
     const result = describer.describeUnix("0 8 * * *");
-    expect(result).toBe("At 8 o'clock");
+    expect(result).toBe("At 8:00 AM");
   });
 
   test("Describe daily at 8:00 AM (Quartz)", () => {
     const result = describer.describeQuartz("0 0 8 * * *");
-    expect(result).toBe("At 8 o'clock");
+    expect(result).toBe("At 8:00 AM");
   });
 
   test("Describe every 2 hours with 0/2 Quartz notation", () => {
@@ -170,12 +170,12 @@ describe("Description", () => {
 
   test("Describe last day of month (Quartz)", () => {
     const result = describer.describeQuartz("0 0 0 L * ?");
-    expect(result).toBe("At 0 o'clock on the last day of the month");
+    expect(result).toBe("At midnight on the last day of the month");
   });
 
   test("Describe at second 30 (Quartz)", () => {
     const result = describer.describeQuartz("30 0 8 * * *");
-    expect(result).toBe("At second 30 At 8 o'clock");
+    expect(result).toBe("At second 30 At 8:00 AM");
   });
 
   test("Describe every moment (all wildcards, Unix)", () => {
@@ -190,17 +190,17 @@ describe("Description", () => {
 
   test("Describe in January (Unix)", () => {
     const result = describer.describeUnix("0 0 1 1 *");
-    expect(result).toBe("At 0 o'clock on the 1st of the month in January");
+    expect(result).toBe("At midnight on the 1st of the month in January");
   });
 
   test("Describe on Sunday (Unix)", () => {
     const result = describer.describeUnix("0 0 * * 0");
-    expect(result).toBe("At 0 o'clock on Sunday");
+    expect(result).toBe("At midnight on Sunday");
   });
 
   test("Describe on Saturday (Unix)", () => {
     const result = describer.describeUnix("0 0 * * 6");
-    expect(result).toBe("At 0 o'clock on Saturday");
+    expect(result).toBe("At midnight on Saturday");
   });
 
   test("Invalid Unix cron expression (too few fields)", () => {
@@ -359,6 +359,107 @@ describe("Validator Checks", () => {
 
   test("validateQuartz detects invalid step increments", () => {
     expect(validator.isValidQuartz("0 */0 * ? * *")).toBe(false);
+  });
+});
+
+describe("@-macro support", () => {
+  test("@yearly converts to quartz", () => {
+    expect(converter.unixToQuartz("@yearly")).toBe("0 0 0 1 1 ? *");
+  });
+
+  test("@annually converts to quartz (alias for @yearly)", () => {
+    expect(converter.unixToQuartz("@annually")).toBe("0 0 0 1 1 ? *");
+  });
+
+  test("@monthly converts to quartz", () => {
+    expect(converter.unixToQuartz("@monthly")).toBe("0 0 0 1 * ? *");
+  });
+
+  test("@weekly converts to quartz (Sunday=1 in Quartz)", () => {
+    expect(converter.unixToQuartz("@weekly")).toBe("0 0 0 ? * 1 *");
+  });
+
+  test("@daily converts to quartz", () => {
+    expect(converter.unixToQuartz("@daily")).toBe("0 0 0 * * * *");
+  });
+
+  test("@midnight converts to quartz (alias for @daily)", () => {
+    expect(converter.unixToQuartz("@midnight")).toBe("0 0 0 * * * *");
+  });
+
+  test("@hourly converts to quartz", () => {
+    expect(converter.unixToQuartz("@hourly")).toBe("0 0 * * * * *");
+  });
+
+  test("@reboot throws a clear error", () => {
+    expect(() => converter.unixToQuartz("@reboot")).toThrow(/@reboot/);
+  });
+
+  test("unknown macro throws", () => {
+    expect(() => converter.unixToQuartz("@unknown")).toThrow(/Unknown cron macro/);
+  });
+
+  test("isValidUnix accepts @daily", () => {
+    expect(validator.isValidUnix("@daily")).toBe(true);
+  });
+
+  test("isValidUnix rejects @reboot", () => {
+    expect(validator.isValidUnix("@reboot")).toBe(false);
+  });
+
+  test("macro matching is case-insensitive", () => {
+    expect(converter.unixToQuartz("@DAILY")).toBe("0 0 0 * * * *");
+    expect(converter.unixToQuartz("@Daily")).toBe("0 0 0 * * * *");
+  });
+
+  test("describeUnix handles @daily", () => {
+    expect(describer.describeUnix("@daily")).toBe("At midnight");
+  });
+
+  test("describeUnix handles @hourly", () => {
+    expect(describer.describeUnix("@hourly")).toBe("Every hour");
+  });
+});
+
+describe("Describer: time formatting", () => {
+  test("midnight (Unix)", () => {
+    expect(describer.describeUnix("0 0 * * *")).toBe("At midnight");
+  });
+
+  test("noon (Unix)", () => {
+    expect(describer.describeUnix("0 12 * * *")).toBe("At noon");
+  });
+
+  test("2:30 AM combined time (Unix)", () => {
+    expect(describer.describeUnix("30 2 * * *")).toBe("At 2:30 AM");
+  });
+
+  test("11:45 PM combined time (Unix)", () => {
+    expect(describer.describeUnix("45 23 * * *")).toBe("At 11:45 PM");
+  });
+
+  test("24-hour format At 14:30 (Unix)", () => {
+    expect(describer.describeUnix("30 14 * * *", { use24HourTimeFormat: true })).toBe("At 14:30");
+  });
+
+  test("24-hour format At 00:00 midnight (Unix)", () => {
+    expect(describer.describeUnix("0 0 * * *", { use24HourTimeFormat: true })).toBe("At 00:00");
+  });
+
+  test("24-hour format At 08:00 AM (Unix)", () => {
+    expect(describer.describeUnix("0 8 * * *", { use24HourTimeFormat: true })).toBe("At 08:00");
+  });
+
+  test("noon in 24-hour format (Unix)", () => {
+    expect(describer.describeUnix("0 12 * * *", { use24HourTimeFormat: true })).toBe("At 12:00");
+  });
+
+  test("2:30 AM in Quartz", () => {
+    expect(describer.describeQuartz("0 30 2 * * *")).toBe("At 2:30 AM");
+  });
+
+  test("use24HourTimeFormat in Quartz", () => {
+    expect(describer.describeQuartz("0 30 14 * * *", { use24HourTimeFormat: true })).toBe("At 14:30");
   });
 });
 

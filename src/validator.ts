@@ -1,3 +1,5 @@
+import { ExpressionHelper } from './helper';
+
 class FieldValidator {
   constructor(
     public min: number,
@@ -168,6 +170,7 @@ export class CronValidatorU2Q {
     if (typeof expression !== "string") {
       throw new Error("Cron expression must be a string");
     }
+    expression = ExpressionHelper.expandMacro(expression);
     const parts = expression.trim().split(/\s+/);
     if (parts.length !== 5) {
       throw new Error(`Unix cron expression must have exactly 5 fields, got ${parts.length}`);
