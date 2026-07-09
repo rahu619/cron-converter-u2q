@@ -1,6 +1,7 @@
 import {
   CronConverterU2Q as converter,
   CronDescriberU2Q as describer,
+  getNextRuns,
   CronValidatorU2Q as validator,
 } from "../index";
 
@@ -460,6 +461,53 @@ describe("Describer: time formatting", () => {
 
   test("use24HourTimeFormat in Quartz", () => {
     expect(describer.describeQuartz("0 30 14 * * *", { use24HourTimeFormat: true })).toBe("At 14:30");
+  });
+});
+
+describe("Next run helper", () => {
+  test("returns the next Unix runs at 15 minute intervals", () => {
+    const runs = getNextRuns("*/15 * * * *", 3, new Date(2026, 0, 1, 0, 0, 0));
+
+    expect(runs).toHaveLength(3);
+    expect(runs.map((run) => run.getMinutes())).toEqual([15, 30, 45]);
+    expect(runs.every((run) => run.getHours() === 0)).toBe(true);
+  });
+
+  test("supports Unix macros", () => {
+    const runs = getNextRuns("@daily", 1, new Date(2026, 0, 1, 12, 0, 0));
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0].getHours()).toBe(0);
+    expect(runs[0].getDate()).toBe(2);
+  });
+
+  test("supports Quartz expressions with seconds", () => {
+    const runs = getNextRuns("30 0 * * * *", 2, new Date(2026, 0, 1, 0, 0, 0));
+
+    expect(runs).toHaveLength(2);
+    expect(runs[0].getSeconds()).toBe(30);
+    expect(runs[0].getMinutes()).toBe(0);
+    expect(runs[1].getHours()).toBe(1);
+    expect(runs[1].getMinutes()).toBe(0);
+    expect(runs[1].getSeconds()).toBe(30);
+  });
+
+  test("supports Quartz nth weekday schedules", () => {
+    const runs = getNextRuns("0 0 12 ? * 2#1 *", 1, new Date(2026, 0, 1, 0, 0, 0));
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0].getHours()).toBe(12);
+    expect(runs[0].getMinutes()).toBe(0);
+    expect(runs[0].getDay()).toBe(1);
+  });
+
+  test("rejects invalid count values", () => {
+    expect(() => getNextRuns("*/15 * * * *", 0)).toThrow("count must be a positive integer");
+    expect(() => getNextRuns("*/15 * * * *", -1)).toThrow("count must be a positive integer");
+  });
+
+  test("rejects invalid fromDate values", () => {
+    expect(() => getNextRuns("*/15 * * * *", 1, new Date("invalid"))).toThrow("fromDate must be a valid Date");
   });
 });
 
