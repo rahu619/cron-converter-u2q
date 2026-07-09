@@ -2,6 +2,11 @@ import { ExpressionHelper as helper } from "./helper";
 import { CronValidatorU2Q } from "./validator";
 import { CronConverterU2Q } from "./converter";
 
+export interface DescriberOptions {
+  /** Use 24-hour clock format (e.g. "At 14:30"). Defaults to false ("At 2:30 PM"). */
+  use24HourTimeFormat?: boolean;
+}
+
 export class CronDescriberU2Q {
   /**
    * Generates a human-readable description for a Unix-style cron expression.
@@ -15,15 +20,15 @@ export class CronDescriberU2Q {
    * @param unixExpression - A string containing the Unix-style cron expression.
    * @returns A human-readable description or an error message if invalid.
    */
-  public static describeUnix(unixExpression: string): string {
+  public static describeUnix(unixExpression: string, options: DescriberOptions = {}): string {
     try {
+      unixExpression = helper.expandMacro(unixExpression);
       CronValidatorU2Q.validateUnix(unixExpression);
       const parts = helper.GetExpressionParts(unixExpression);
       const [min, hour, dom, month, dow] = parts;
 
       const descriptions = [
-        this.describeMinute(min, true),
-        this.describeHour(hour),
+        this.describeTime(hour, min, options),
         this.describeDayOfMonth(dom),
         this.describeMonth(month),
         this.describeDayOfWeek(dow),
@@ -49,7 +54,7 @@ export class CronDescriberU2Q {
    * @param quartzExpression - A string containing the Quartz-style cron expression.
    * @returns A human-readable description or an error message if invalid.
    */
-  public static describeQuartz(quartzExpression: string): string {
+  public static describeQuartz(quartzExpression: string, options: DescriberOptions = {}): string {
     try {
       CronValidatorU2Q.validateQuartz(quartzExpression);
       const parts = helper.GetExpressionParts(quartzExpression);
@@ -60,8 +65,7 @@ export class CronDescriberU2Q {
 
       const descriptions = [
         this.describeSecond(second, true),
-        this.describeMinute(min, true),
-        this.describeHour(hour),
+        this.describeTime(hour, min, options),
         this.describeDayOfMonth(dom),
         this.describeMonth(month),
         this.describeDayOfWeek(normalizedDow),
@@ -72,6 +76,61 @@ export class CronDescriberU2Q {
     } catch (error) {
       return "Invalid Quartz cron expression";
     }
+  }
+
+  /** Returns true when a field value is a plain integer (no *, ?, ,, -, /). */
+  private static isSimpleNumeric(s: string): boolean {
+    return /^\d+$/.test(s);
+  }
+
+  /**
+   * Produces a combined time string such as "At 2:30 AM" or "At midnight".
+   * Falls back to separate minute/hour descriptions for complex expressions.
+   */
+  private static describeTime(hour: string, minute: string, options: DescriberOptions): string {
+    const use24 = options.use24HourTimeFormat ?? false;
+
+    // Wildcard hour — minute describes itself (e.g. "Every 5 minutes")
+    if (hour === "*" || hour === "?") {
+      // minute=0 with wildcard hour means "at the top of every hour"
+      if (minute === "0") return "Every hour";
+      return this.describeMinute(minute, true);
+    }
+
+    // Both are simple integers — produce a combined "At H:MM AM/PM" string
+    if (this.isSimpleNumeric(hour) && (minute === "0" || minute === "*" || this.isSimpleNumeric(minute))) {
+      const h = parseInt(hour, 10);
+      const m = minute === "*" ? null : parseInt(minute, 10);
+
+      // Wildcard minute with fixed hour — describe hour only
+      if (m === null) {
+        if (use24) return `Every minute of hour ${hour.padStart(2, "0")}`;
+        const period = h < 12 ? "AM" : "PM";
+        const h12 = h % 12 || 12;
+        return `Every minute of ${h12} ${period}`;
+      }
+
+      if (!use24) {
+        if (h === 0 && m === 0) return "At midnight";
+        if (h === 12 && m === 0) return "At noon";
+        const period = h < 12 ? "AM" : "PM";
+        const h12 = h % 12 || 12;
+        const mStr = m.toString().padStart(2, "0");
+        return `At ${h12}:${mStr} ${period}`;
+      } else {
+        const hStr = h.toString().padStart(2, "0");
+        const mStr = m.toString().padStart(2, "0");
+        return `At ${hStr}:${mStr}`;
+      }
+    }
+
+    // Complex expression — fall back to separate descriptions.
+    // For a simple numeric hour, still use the formatted time to avoid "o'clock".
+    const minDesc = this.describeMinute(minute, true);
+    const hourDesc = this.isSimpleNumeric(hour)
+      ? this.describeTime(hour, "0", options)
+      : this.describeHour(hour);
+    return [minDesc, hourDesc].filter(Boolean).join(" ");
   }
 
   private static describeSecond(second: string, suppressZero = false): string {

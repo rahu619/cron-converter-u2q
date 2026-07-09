@@ -8,6 +8,7 @@ export class CronConverterU2Q {
      * @returns the corresponding quartz expression
      */
     public static unixToQuartz(unixExpression: string, year = '*'): string {
+        unixExpression = helper.expandMacro(unixExpression);
         CronValidatorU2Q.validateUnix(unixExpression);
         const parts = helper.GetExpressionParts(unixExpression);
         const [min, hour, dom, month, dow] = parts;
