@@ -1,8 +1,14 @@
+import path from "path";
 import {
   CronConverterU2Q as converter,
   CronDescriberU2Q as describer,
   getNextRuns,
+  getPreviousRuns,
+  loadLocale,
   CronValidatorU2Q as validator,
+  en,
+  getLocale,
+  registerLocale,
 } from "../index";
 
 describe("Unix2Quartz Conversion", () => {
@@ -508,6 +514,110 @@ describe("Next run helper", () => {
 
   test("rejects invalid fromDate values", () => {
     expect(() => getNextRuns("*/15 * * * *", 1, new Date("invalid"))).toThrow("fromDate must be a valid Date");
+  });
+});
+
+describe("i18n locale support", () => {
+  test("en locale is the default", () => {
+    expect(describer.describeUnix("0 0 * * *")).toBe("At midnight");
+    expect(describer.describeUnix("0 0 * * *", { locale: "en" })).toBe("At midnight");
+    expect(describer.describeUnix("0 0 * * *", { locale: en })).toBe("At midnight");
+  });
+
+  test("getLocale returns a registered locale", () => {
+    expect(getLocale("en").id).toBe("en");
+  });
+
+  test("getLocale throws for unknown locale", () => {
+    expect(() => getLocale("zz")).toThrow(/Unknown locale/i);
+  });
+
+  test("registerLocale makes a custom locale available by ID", () => {
+    const custom = { ...en, id: "en-test", tokens: { ...en.tokens, midnight: "Custom midnight" } };
+    registerLocale(custom);
+    expect(describer.describeUnix("0 0 * * *", { locale: "en-test" })).toBe("Custom midnight");
+  });
+
+  test("passing a CronLocale object directly works", () => {
+    const frLocale = {
+      ...en,
+      id: "fr",
+      tokens: { ...en.tokens, midnight: "À minuit", everyMoment: "À tout moment", everyHour: "Toutes les heures" },
+    };
+    expect(describer.describeUnix("0 0 * * *", { locale: frLocale })).toBe("À minuit");
+    expect(describer.describeUnix("* * * * *", { locale: frLocale })).toBe("À tout moment");
+  });
+});
+
+describe("loadLocale", () => {
+  const fixturePath = path.join(__dirname, "fixtures", "de.json");
+
+  test("loads and registers a locale from a JSON file", async () => {
+    await loadLocale(fixturePath);
+    expect(describer.describeUnix("0 0 * * *", { locale: "de" })).toBe("Um Mitternacht");
+    expect(describer.describeUnix("*/5 * * * *", { locale: "de" })).toBe("Jede 5 Minuten");
+    expect(describer.describeUnix("0 8 * * *", { locale: "de" })).toBe("Um 08:00");
+  });
+
+  test("localeId argument overrides the id in the file", async () => {
+    await loadLocale(fixturePath, "de-formal");
+    expect(describer.describeUnix("0 0 * * *", { locale: "de-formal" })).toBe("Um Mitternacht");
+  });
+
+  test("ordinalSuffix is applied correctly", async () => {
+    await loadLocale(fixturePath);
+    expect(describer.describeQuartz("0 0 0 1 * ?", { locale: "de" })).toContain("1.");
+  });
+
+  test("throws on a non-existent file", async () => {
+    await expect(loadLocale("/tmp/does-not-exist.json")).rejects.toThrow();
+  });
+});
+
+describe("getPreviousRuns helper", () => {
+  test("returns dates in descending order", () => {
+    const runs = getPreviousRuns("*/15 * * * *", 3, new Date(2026, 0, 1, 1, 0, 0));
+
+    expect(runs).toHaveLength(3);
+    // Should be 0:45, 0:30, 0:15
+    expect(runs[0].getMinutes()).toBe(45);
+    expect(runs[1].getMinutes()).toBe(30);
+    expect(runs[2].getMinutes()).toBe(15);
+  });
+
+  test("rejects invalid count", () => {
+    expect(() => getPreviousRuns("*/15 * * * *", 0)).toThrow("count must be a positive integer");
+  });
+});
+
+describe("timezone support in getNextRuns", () => {
+  test("rejects invalid timezone strings", () => {
+    expect(() =>
+      getNextRuns("0 9 * * *", 1, new Date(), { timezone: "Not/A/Timezone" })
+    ).toThrow(/Invalid timezone/i);
+  });
+
+  test("UTC timezone returns same result as no timezone for a UTC date", () => {
+    const from = new Date("2026-01-01T00:00:00Z");
+    const withTz = getNextRuns("0 9 * * *", 1, from, { timezone: "UTC" });
+    expect(withTz[0].toISOString()).toBe("2026-01-01T09:00:00.000Z");
+  });
+
+  test("locale option resolves timezone from registered locale", async () => {
+    const fixturePath = path.join(__dirname, "fixtures", "de.json");
+    await loadLocale(fixturePath);
+    // de locale has timezone: "Europe/Berlin"
+    // At 2026-01-01T00:00:00Z, Berlin is UTC+1, so 9:00 Berlin = 8:00 UTC
+    const from = new Date("2026-01-01T00:00:00Z");
+    const withLocale = getNextRuns("0 9 * * *", 1, from, { locale: "de" });
+    expect(withLocale[0].toISOString()).toBe("2026-01-01T08:00:00.000Z");
+  });
+
+  test("explicit timezone overrides locale timezone", async () => {
+    const from = new Date("2026-01-01T00:00:00Z");
+    // UTC has no offset, so 9:00 UTC = 9:00 UTC
+    const withOverride = getNextRuns("0 9 * * *", 1, from, { locale: "de", timezone: "UTC" });
+    expect(withOverride[0].toISOString()).toBe("2026-01-01T09:00:00.000Z");
   });
 });
 

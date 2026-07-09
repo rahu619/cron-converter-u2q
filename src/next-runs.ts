@@ -1,5 +1,7 @@
 import { ExpressionHelper as helper } from './helper';
 import { CronValidatorU2Q } from './validator';
+import { getLocale } from './locales/index';
+import type { CronLocale } from './locales/types';
 
 type CronKind = 'unix' | 'quartz';
 
@@ -15,11 +17,50 @@ interface NumericFieldConfig {
   normalize?: (value: number) => number;
 }
 
+interface DateParts {
+  year: number;
+  month: number;     // 1-12
+  day: number;       // 1-31
+  hour: number;      // 0-23
+  minute: number;    // 0-59
+  second: number;    // 0-59
+  dayOfWeek: number; // 0-6 (0=Sunday)
+}
+
+export interface NextRunOptions {
+  /**
+   * A registered locale ID (e.g. "de") or a CronLocale object.
+   * When set, its timezone field is used unless timezone is also specified.
+   */
+  locale?: string | CronLocale;
+  /**
+   * IANA timezone name (e.g. "America/New_York").
+   * Overrides the locale's timezone when both are provided.
+   */
+  timezone?: string;
+}
+
+/** Resolves the effective IANA timezone from options, falling back to undefined (system time). */
+function resolveTimezone(options?: NextRunOptions): string | undefined {
+  if (options?.timezone) return options.timezone;
+  if (options?.locale) {
+    const locale = typeof options.locale === 'string' ? getLocale(options.locale) : options.locale;
+    return locale.timezone;
+  }
+  return undefined;
+}
+
 const UNIX_DOW_ALIASES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const QUARTZ_DOW_ALIASES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const MONTH_ALIASES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
-export function getNextRuns(expression: string, count: number, fromDate = new Date()): Date[] {
+/** Returns the next `count` run dates matching `expression` after `fromDate`. */
+export function getNextRuns(
+  expression: string,
+  count: number,
+  fromDate = new Date(),
+  options?: NextRunOptions
+): Date[] {
   if (!Number.isInteger(count) || count <= 0) {
     throw new Error('count must be a positive integer');
   }
@@ -28,11 +69,11 @@ export function getNextRuns(expression: string, count: number, fromDate = new Da
   }
 
   const parsed = parseExpression(expression);
-  const results: Date[] = [];
-  const cursor = new Date(fromDate.getTime());
+  const timezone = resolveTimezone(options);
   const precision = parsed.kind === 'unix' || parsed.parts[0] === '0' ? 'minute' : 'second';
   const searchLimit = precision === 'minute' ? 2_635_200 : 31_536_000;
 
+  const cursor = new Date(fromDate.getTime());
   if (precision === 'minute') {
     cursor.setMilliseconds(0);
     cursor.setSeconds(0, 0);
@@ -42,13 +83,61 @@ export function getNextRuns(expression: string, count: number, fromDate = new Da
     cursor.setSeconds(cursor.getSeconds() + 1);
   }
 
+  const results: Date[] = [];
   let iterations = 0;
   while (results.length < count && iterations < searchLimit) {
-    if (matchesExpression(parsed, cursor)) {
+    const parts = getDateParts(cursor, timezone);
+    if (matchesExpression(parsed, parts)) {
       results.push(new Date(cursor.getTime()));
     }
-
     advanceCursor(cursor, precision);
+    iterations += 1;
+  }
+
+  if (results.length < count) {
+    throw new Error(`Unable to find ${count} matching run(s) within the search window`);
+  }
+
+  return results;
+}
+
+/** Returns the previous `count` run dates matching `expression` before `fromDate`. */
+export function getPreviousRuns(
+  expression: string,
+  count: number,
+  fromDate = new Date(),
+  options?: NextRunOptions
+): Date[] {
+  if (!Number.isInteger(count) || count <= 0) {
+    throw new Error('count must be a positive integer');
+  }
+  if (!(fromDate instanceof Date) || Number.isNaN(fromDate.getTime())) {
+    throw new Error('fromDate must be a valid Date');
+  }
+
+  const parsed = parseExpression(expression);
+  const timezone = resolveTimezone(options);
+  const precision = parsed.kind === 'unix' || parsed.parts[0] === '0' ? 'minute' : 'second';
+  const searchLimit = precision === 'minute' ? 2_635_200 : 31_536_000;
+
+  const cursor = new Date(fromDate.getTime());
+  if (precision === 'minute') {
+    cursor.setMilliseconds(0);
+    cursor.setSeconds(0, 0);
+    cursor.setMinutes(cursor.getMinutes() - 1);
+  } else {
+    cursor.setMilliseconds(0);
+    cursor.setSeconds(cursor.getSeconds() - 1);
+  }
+
+  const results: Date[] = [];
+  let iterations = 0;
+  while (results.length < count && iterations < searchLimit) {
+    const parts = getDateParts(cursor, timezone);
+    if (matchesExpression(parsed, parts)) {
+      results.push(new Date(cursor.getTime()));
+    }
+    retreatCursor(cursor, precision);
     iterations += 1;
   }
 
@@ -76,132 +165,94 @@ function parseExpression(expression: string): ParsedCronExpression {
   return { kind: 'quartz', parts };
 }
 
-function matchesExpression(parsed: ParsedCronExpression, date: Date): boolean {
+function matchesExpression(parsed: ParsedCronExpression, dateParts: DateParts): boolean {
   if (parsed.kind === 'unix') {
-    return matchesUnixExpression(parsed.parts, date);
+    return matchesUnixExpression(parsed.parts, dateParts);
   }
-  return matchesQuartzExpression(parsed.parts, date);
+  return matchesQuartzExpression(parsed.parts, dateParts);
 }
 
-function matchesUnixExpression(parts: string[], date: Date): boolean {
+function matchesUnixExpression(parts: string[], dp: DateParts): boolean {
   const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
 
   return (
-    fieldMatchesNumeric(minute, date.getMinutes(), { min: 0, max: 59 }) &&
-    fieldMatchesNumeric(hour, date.getHours(), { min: 0, max: 23 }) &&
-    fieldMatchesNumeric(month, date.getMonth() + 1, { min: 1, max: 12, aliases: MONTH_ALIASES }) &&
-    matchesUnixDayOfMonthAndWeek(dayOfMonth, dayOfWeek, date)
+    fieldMatchesNumeric(minute, dp.minute, { min: 0, max: 59 }) &&
+    fieldMatchesNumeric(hour, dp.hour, { min: 0, max: 23 }) &&
+    fieldMatchesNumeric(month, dp.month, { min: 1, max: 12, aliases: MONTH_ALIASES }) &&
+    matchesUnixDayOfMonthAndWeek(dayOfMonth, dayOfWeek, dp)
   );
 }
 
-function matchesUnixDayOfMonthAndWeek(dayOfMonth: string, dayOfWeek: string, date: Date): boolean {
-  const domMatches = fieldMatchesNumeric(dayOfMonth, date.getDate(), { min: 1, max: 31 });
-  const dowMatches = fieldMatchesNumeric(dayOfWeek, date.getDay(), {
+function matchesUnixDayOfMonthAndWeek(dayOfMonth: string, dayOfWeek: string, dp: DateParts): boolean {
+  const domMatches = fieldMatchesNumeric(dayOfMonth, dp.day, { min: 1, max: 31 });
+  const dowMatches = fieldMatchesNumeric(dayOfWeek, dp.dayOfWeek, {
     min: 0,
     max: 7,
     aliases: UNIX_DOW_ALIASES,
     normalize: (value) => (value === 7 ? 0 : value),
   });
 
-  if (dayOfMonth === '*' && dayOfWeek === '*') {
-    return true;
-  }
-  if (dayOfMonth === '*') {
-    return dowMatches;
-  }
-  if (dayOfWeek === '*') {
-    return domMatches;
-  }
-
+  if (dayOfMonth === '*' && dayOfWeek === '*') return true;
+  if (dayOfMonth === '*') return dowMatches;
+  if (dayOfWeek === '*') return domMatches;
   return domMatches || dowMatches;
 }
 
-function matchesQuartzExpression(parts: string[], date: Date): boolean {
+function matchesQuartzExpression(parts: string[], dp: DateParts): boolean {
   const [second, minute, hour, dayOfMonth, month, dayOfWeek, year] = parts;
 
   return (
-    fieldMatchesNumeric(second, date.getSeconds(), { min: 0, max: 59 }) &&
-    fieldMatchesNumeric(minute, date.getMinutes(), { min: 0, max: 59 }) &&
-    fieldMatchesNumeric(hour, date.getHours(), { min: 0, max: 23 }) &&
-    fieldMatchesNumeric(month, date.getMonth() + 1, { min: 1, max: 12, aliases: MONTH_ALIASES }) &&
-    matchesQuartzDayOfMonth(dayOfMonth, date) &&
-    matchesQuartzDayOfWeek(dayOfWeek, date) &&
-    fieldMatchesNumeric(year ?? '*', date.getFullYear(), { min: 1970, max: 2099 })
+    fieldMatchesNumeric(second, dp.second, { min: 0, max: 59 }) &&
+    fieldMatchesNumeric(minute, dp.minute, { min: 0, max: 59 }) &&
+    fieldMatchesNumeric(hour, dp.hour, { min: 0, max: 23 }) &&
+    fieldMatchesNumeric(month, dp.month, { min: 1, max: 12, aliases: MONTH_ALIASES }) &&
+    matchesQuartzDayOfMonth(dayOfMonth, dp) &&
+    matchesQuartzDayOfWeek(dayOfWeek, dp) &&
+    fieldMatchesNumeric(year ?? '*', dp.year, { min: 1970, max: 2099 })
   );
 }
 
-function matchesQuartzDayOfMonth(field: string, date: Date): boolean {
-  if (field === '*' || field === '?') {
-    return true;
-  }
+function matchesQuartzDayOfMonth(field: string, dp: DateParts): boolean {
+  if (field === '*' || field === '?') return true;
 
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
-  const lastDay = daysInMonth(year, month);
+  const lastDay = daysInMonth(dp.year, dp.month - 1);
 
   return field.split(',').some((part) => {
     const trimmed = part.trim();
-
-    if (trimmed === 'L') {
-      return day === lastDay;
-    }
-
-    if (trimmed === 'LW') {
-      return day === nearestWeekday(year, month, lastDay);
-    }
-
+    if (trimmed === 'L') return dp.day === lastDay;
+    if (trimmed === 'LW') return dp.day === nearestWeekday(dp.year, dp.month - 1, lastDay);
     if (trimmed.startsWith('L-')) {
       const offset = Number(trimmed.slice(2));
-      if (Number.isNaN(offset) || offset < 1 || offset > 31) {
-        return false;
-      }
-      return day === lastDay - offset;
+      return !Number.isNaN(offset) && dp.day === lastDay - offset;
     }
-
     if (trimmed.endsWith('W')) {
       const targetDay = Number(trimmed.slice(0, -1));
-      if (Number.isNaN(targetDay) || targetDay < 1 || targetDay > lastDay) {
-        return false;
-      }
-      return day === nearestWeekday(year, month, targetDay);
+      if (Number.isNaN(targetDay) || targetDay < 1 || targetDay > lastDay) return false;
+      return dp.day === nearestWeekday(dp.year, dp.month - 1, targetDay);
     }
-
-    return fieldMatchesNumeric(trimmed, day, { min: 1, max: 31 });
+    return fieldMatchesNumeric(trimmed, dp.day, { min: 1, max: 31 });
   });
 }
 
-function matchesQuartzDayOfWeek(field: string, date: Date): boolean {
-  if (field === '*' || field === '?') {
-    return true;
-  }
+function matchesQuartzDayOfWeek(field: string, dp: DateParts): boolean {
+  if (field === '*' || field === '?') return true;
 
-  const quartzDow = date.getDay() + 1;
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
+  const quartzDow = dp.dayOfWeek + 1;
 
   return field.split(',').some((part) => {
     const trimmed = part.trim();
-
     if (trimmed.endsWith('L')) {
       const targetDow = parseQuartzDowValue(trimmed.slice(0, -1));
-      if (targetDow === null) {
-        return false;
-      }
-      return quartzDow === targetDow && isLastOccurrenceOfWeekdayInMonth(year, month, day, targetDow);
+      if (targetDow === null) return false;
+      return quartzDow === targetDow && isLastOccurrenceOfWeekdayInMonth(dp.year, dp.month - 1, dp.day, targetDow);
     }
-
     if (trimmed.includes('#')) {
       const [dowText, nthText] = trimmed.split('#');
       const targetDow = parseQuartzDowValue(dowText);
       const nth = Number(nthText);
-      if (targetDow === null || Number.isNaN(nth) || nth < 1 || nth > 5) {
-        return false;
-      }
-      return quartzDow === targetDow && isNthOccurrenceOfWeekdayInMonth(day, quartzDow, nth);
+      if (targetDow === null || Number.isNaN(nth) || nth < 1 || nth > 5) return false;
+      return quartzDow === targetDow && isNthOccurrenceOfWeekdayInMonth(dp.day, quartzDow, nth);
     }
-
     return fieldMatchesNumeric(trimmed, quartzDow, { min: 1, max: 7, aliases: QUARTZ_DOW_ALIASES });
   });
 }
@@ -339,9 +390,67 @@ function advanceCursor(cursor: Date, precision: 'minute' | 'second'): void {
     cursor.setSeconds(0, 0);
     return;
   }
-
   cursor.setSeconds(cursor.getSeconds() + 1);
   cursor.setMilliseconds(0);
+}
+
+function retreatCursor(cursor: Date, precision: 'minute' | 'second'): void {
+  if (precision === 'minute') {
+    cursor.setMinutes(cursor.getMinutes() - 1);
+    cursor.setSeconds(0, 0);
+    return;
+  }
+  cursor.setSeconds(cursor.getSeconds() - 1);
+  cursor.setMilliseconds(0);
+}
+
+/**
+ * Returns date parts either in the local timezone (when no timezone is given)
+ * or in the specified IANA timezone using the native Intl API (zero dependencies).
+ */
+function getDateParts(date: Date, timezone?: string): DateParts {
+  if (!timezone) {
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+      hour: date.getHours(),
+      minute: date.getMinutes(),
+      second: date.getSeconds(),
+      dayOfWeek: date.getDay(),
+    };
+  }
+
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+
+    const parts: Record<string, string> = {};
+    for (const { type, value } of formatter.formatToParts(date)) {
+      parts[type] = value;
+    }
+
+    const year = parseInt(parts.year, 10);
+    const month = parseInt(parts.month, 10);
+    const day = parseInt(parts.day, 10);
+    const hour = parseInt(parts.hour, 10) % 24; // normalise "24:xx" midnight edge case
+    const minute = parseInt(parts.minute, 10);
+    const second = parseInt(parts.second, 10);
+    // Derive day-of-week from the date components to avoid locale-specific weekday strings.
+    const dayOfWeek = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+
+    return { year, month, day, hour, minute, second, dayOfWeek };
+  } catch {
+    throw new Error(`Invalid timezone: "${timezone}"`);
+  }
 }
 
 function daysInMonth(year: number, monthIndex: number): number {
