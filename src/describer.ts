@@ -1,327 +1,300 @@
 import { ExpressionHelper as helper } from "./helper";
 import { CronValidatorU2Q } from "./validator";
 import { CronConverterU2Q } from "./converter";
+import { en, getLocale } from "./locales/index";
+import type { CronLocale } from "./locales/types";
+
+export type { CronLocale };
 
 export interface DescriberOptions {
-  /** Use 24-hour clock format (e.g. "At 14:30"). Defaults to false ("At 2:30 PM"). */
+  /** Use 24-hour clock format (e.g. "At 14:30"). Overrides the locale's default. */
   use24HourTimeFormat?: boolean;
+  /**
+   * Locale to use for descriptions. Accepts a locale ID string (e.g. "en", "es")
+   * or a custom CronLocale object. Defaults to English ("en").
+   */
+  locale?: string | CronLocale;
 }
 
+interface FieldConfig {
+  unitSingular: string;
+  unitPlural: string;
+  isDom?: boolean;
+  isDow?: boolean;
+  isMonth?: boolean;
+}
+
+const DOW_SHORT_ALIASES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const MONTH_SHORT_ALIASES = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+
 export class CronDescriberU2Q {
-  /**
-   * Generates a human-readable description for a Unix-style cron expression.
-   *
-   * Unix-style cron expressions consist of 5 parts:
-   * - Minute (0-59)
-   * - Hour (0-23)
-   * - Day of Month (1-31)
-   * - Month (1-12)
-   * - Day of Week (0-6, where 0 = Sunday)
-   * @param unixExpression - A string containing the Unix-style cron expression.
-   * @returns A human-readable description or an error message if invalid.
-   */
+  private static resolveLocale(options: DescriberOptions): CronLocale {
+    if (!options.locale) return en;
+    if (typeof options.locale === "string") return getLocale(options.locale);
+    return options.locale;
+  }
+
   public static describeUnix(unixExpression: string, options: DescriberOptions = {}): string {
     try {
       unixExpression = helper.expandMacro(unixExpression);
       CronValidatorU2Q.validateUnix(unixExpression);
       const parts = helper.GetExpressionParts(unixExpression);
       const [min, hour, dom, month, dow] = parts;
+      const locale = this.resolveLocale(options);
 
       const descriptions = [
-        this.describeTime(hour, min, options),
-        this.describeDayOfMonth(dom),
-        this.describeMonth(month),
-        this.describeDayOfWeek(dow),
+        this.describeTime(hour, min, options, locale),
+        this.describeDayOfMonth(dom, locale),
+        this.describeMonth(month, locale),
+        this.describeDayOfWeek(dow, locale),
       ];
 
-      return this.combineDescriptions(descriptions);
-    } catch (error) {
+      return this.combineDescriptions(descriptions, locale);
+    } catch {
       return "Invalid Unix cron expression";
     }
   }
 
-  /**
-   * Generates a human-readable description for a Quartz-style cron expression.
-   *
-   * Quartz-style cron expressions consist of 6 or 7 parts:
-   * - Second (0-59)
-   * - Minute (0-59)
-   * - Hour (0-23)
-   * - Day of Month (1-31)
-   * - Month (1-12)
-   * - Day of Week (1-7, where 1 = Sunday)
-   * - Year (optional)
-   * @param quartzExpression - A string containing the Quartz-style cron expression.
-   * @returns A human-readable description or an error message if invalid.
-   */
   public static describeQuartz(quartzExpression: string, options: DescriberOptions = {}): string {
     try {
       CronValidatorU2Q.validateQuartz(quartzExpression);
       const parts = helper.GetExpressionParts(quartzExpression);
       const [second, min, hour, dom, month, dow, year] = parts;
-
-      // Normalize Quartz DOW to Unix DOW for consistent description mapping
+      const locale = this.resolveLocale(options);
       const normalizedDow = CronConverterU2Q.quartzDowToUnix(dow);
 
       const descriptions = [
-        this.describeSecond(second, true),
-        this.describeTime(hour, min, options),
-        this.describeDayOfMonth(dom),
-        this.describeMonth(month),
-        this.describeDayOfWeek(normalizedDow),
-        this.describeYear(year),
+        this.describeSecond(second, locale, true),
+        this.describeTime(hour, min, options, locale),
+        this.describeDayOfMonth(dom, locale),
+        this.describeMonth(month, locale),
+        this.describeDayOfWeek(normalizedDow, locale),
+        this.describeYear(year, locale),
       ];
 
-      return this.combineDescriptions(descriptions);
-    } catch (error) {
+      return this.combineDescriptions(descriptions, locale);
+    } catch {
       return "Invalid Quartz cron expression";
     }
   }
 
-  /** Returns true when a field value is a plain integer (no *, ?, ,, -, /). */
   private static isSimpleNumeric(s: string): boolean {
     return /^\d+$/.test(s);
   }
 
-  /**
-   * Produces a combined time string such as "At 2:30 AM" or "At midnight".
-   * Falls back to separate minute/hour descriptions for complex expressions.
-   */
-  private static describeTime(hour: string, minute: string, options: DescriberOptions): string {
-    const use24 = options.use24HourTimeFormat ?? false;
+  private static describeTime(
+    hour: string,
+    minute: string,
+    options: DescriberOptions,
+    locale: CronLocale
+  ): string {
+    // explicitUse24 is only true when the *caller* explicitly set the flag.
+    // The locale's own default does not suppress midnight/noon tokens.
+    const explicitUse24 = options.use24HourTimeFormat;
+    const use24 = explicitUse24 ?? locale.use24HourTimeFormat;
 
-    // Wildcard hour — minute describes itself (e.g. "Every 5 minutes")
     if (hour === "*" || hour === "?") {
-      // minute=0 with wildcard hour means "at the top of every hour"
-      if (minute === "0") return "Every hour";
-      return this.describeMinute(minute, true);
+      if (minute === "0") return locale.tokens.everyHour;
+      return this.describeMinute(minute, locale, true);
     }
 
-    // Both are simple integers — produce a combined "At H:MM AM/PM" string
-    if (this.isSimpleNumeric(hour) && (minute === "0" || minute === "*" || this.isSimpleNumeric(minute))) {
+    if (
+      this.isSimpleNumeric(hour) &&
+      (minute === "0" || minute === "*" || this.isSimpleNumeric(minute))
+    ) {
       const h = parseInt(hour, 10);
       const m = minute === "*" ? null : parseInt(minute, 10);
 
-      // Wildcard minute with fixed hour — describe hour only
       if (m === null) {
-        if (use24) return `Every minute of hour ${hour.padStart(2, "0")}`;
-        const period = h < 12 ? "AM" : "PM";
+        if (use24) return `${locale.tokens.everyMinuteOfPrefix} ${h.toString().padStart(2, "0")}`;
+        const period = h < 12 ? locale.tokens.am : locale.tokens.pm;
         const h12 = h % 12 || 12;
-        return `Every minute of ${h12} ${period}`;
+        return `${locale.tokens.everyMinuteOfPrefix} ${h12} ${period}`;
+      }
+
+      // midnight / noon tokens are honoured unless the caller explicitly forces 24h.
+      if (explicitUse24 !== true) {
+        if (h === 0 && m === 0) return locale.tokens.midnight;
+        if (h === 12 && m === 0) return locale.tokens.noon;
       }
 
       if (!use24) {
-        if (h === 0 && m === 0) return "At midnight";
-        if (h === 12 && m === 0) return "At noon";
-        const period = h < 12 ? "AM" : "PM";
+        const period = h < 12 ? locale.tokens.am : locale.tokens.pm;
         const h12 = h % 12 || 12;
-        const mStr = m.toString().padStart(2, "0");
-        return `At ${h12}:${mStr} ${period}`;
-      } else {
-        const hStr = h.toString().padStart(2, "0");
-        const mStr = m.toString().padStart(2, "0");
-        return `At ${hStr}:${mStr}`;
+        return `${locale.tokens.at} ${h12}:${m.toString().padStart(2, "0")} ${period}`;
       }
+
+      return `${locale.tokens.at} ${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
     }
 
-    // Complex expression — fall back to separate descriptions.
-    // For a simple numeric hour, still use the formatted time to avoid "o'clock".
-    const minDesc = this.describeMinute(minute, true);
+    const minDesc = this.describeMinute(minute, locale, true);
     const hourDesc = this.isSimpleNumeric(hour)
-      ? this.describeTime(hour, "0", options)
-      : this.describeHour(hour);
+      ? this.describeTime(hour, "0", options, locale)
+      : this.describeHour(hour, locale);
     return [minDesc, hourDesc].filter(Boolean).join(" ");
   }
 
-  private static describeSecond(second: string, suppressZero = false): string {
+  private static describeSecond(second: string, locale: CronLocale, suppressZero = false): string {
     if (second === "*" || (suppressZero && second === "0")) return "";
-    const desc = this.describeField(second, { nameMap: null, unitSingular: "second", unitPlural: "seconds" });
-    if (desc.startsWith("every") || desc.startsWith("from")) {
-      return desc.charAt(0).toUpperCase() + desc.slice(1);
-    }
-    return `At second ${desc}`;
+    const desc = this.describeField(
+      second,
+      { unitSingular: locale.tokens.second, unitPlural: locale.tokens.seconds },
+      locale
+    );
+    if (this.isStepOrRange(desc, locale)) return this.capitalize(desc);
+    return `${locale.tokens.atSecond} ${desc}`;
   }
 
-  private static describeMinute(min: string, suppressZero = false): string {
+  private static describeMinute(min: string, locale: CronLocale, suppressZero = false): string {
     if (min === "*" || (suppressZero && min === "0")) return "";
-    const desc = this.describeField(min, { nameMap: null, unitSingular: "minute", unitPlural: "minutes" });
-    if (desc.startsWith("every") || desc.startsWith("from")) {
-      return desc.charAt(0).toUpperCase() + desc.slice(1);
-    }
-    return `At minute ${desc}`;
+    const desc = this.describeField(
+      min,
+      { unitSingular: locale.tokens.minute, unitPlural: locale.tokens.minutes },
+      locale
+    );
+    if (this.isStepOrRange(desc, locale)) return this.capitalize(desc);
+    return `${locale.tokens.atMinute} ${desc}`;
   }
 
-  private static describeHour(hour: string): string {
+  private static describeHour(hour: string, locale: CronLocale): string {
     if (hour === "*") return "";
-    const desc = this.describeField(hour, { nameMap: null, unitSingular: "hour", unitPlural: "hours" });
-    if (desc.startsWith("every") || desc.startsWith("from")) {
-      return desc.charAt(0).toUpperCase() + desc.slice(1);
-    }
-    return `At ${desc} o'clock`;
+    const desc = this.describeField(
+      hour,
+      { unitSingular: locale.tokens.hour, unitPlural: locale.tokens.hours },
+      locale
+    );
+    if (this.isStepOrRange(desc, locale)) return this.capitalize(desc);
+    return `${locale.tokens.at} ${desc}`;
   }
 
-  private static describeDayOfMonth(dom: string): string {
-    const desc = this.describeField(dom, {
-      nameMap: null,
-      unitSingular: "day of month",
-      unitPlural: "days of month",
-      isDom: true
-    });
+  private static describeDayOfMonth(dom: string, locale: CronLocale): string {
+    const desc = this.describeField(
+      dom,
+      { unitSingular: locale.tokens.dayOfMonth, unitPlural: locale.tokens.daysOfMonth, isDom: true },
+      locale
+    );
     if (!desc) return "";
-    if (desc.startsWith("every") || desc.startsWith("from")) return desc;
-    return `on the ${desc} of the month`;
+    if (this.isStepOrRange(desc, locale)) return desc;
+    return `${locale.tokens.onThe} ${desc} ${locale.tokens.ofTheMonth}`;
   }
 
-  private static describeMonth(month: string): string {
-    const desc = this.describeField(month, {
-      nameMap: [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ],
-      unitSingular: "month",
-      unitPlural: "months"
-    });
+  private static describeMonth(month: string, locale: CronLocale): string {
+    const desc = this.describeField(
+      month,
+      { unitSingular: locale.tokens.month, unitPlural: locale.tokens.months, isMonth: true },
+      locale
+    );
     if (!desc) return "";
-    if (desc.startsWith("every") || desc.startsWith("from")) return desc;
-    return `in ${desc}`;
+    if (this.isStepOrRange(desc, locale)) return desc;
+    return `${locale.tokens.in} ${desc}`;
   }
 
-  private static describeDayOfWeek(dow: string): string {
-    const desc = this.describeField(dow, {
-      nameMap: [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ],
-      unitSingular: "day of week",
-      unitPlural: "days of week",
-      isDow: true
-    });
+  private static describeDayOfWeek(dow: string, locale: CronLocale): string {
+    const desc = this.describeField(
+      dow,
+      { unitSingular: locale.tokens.dayOfWeek, unitPlural: locale.tokens.daysOfWeek, isDow: true },
+      locale
+    );
     if (!desc) return "";
-    if (desc.startsWith("every") || desc.startsWith("from")) return desc;
-    return `on ${desc}`;
+    if (this.isStepOrRange(desc, locale)) return desc;
+    return `${locale.tokens.on} ${desc}`;
   }
 
-  private static describeYear(year: string | undefined): string {
+  private static describeYear(year: string | undefined, locale: CronLocale): string {
     if (!year || year === "*") return "";
-    const desc = this.describeField(year, {
-      nameMap: null,
-      unitSingular: "year",
-      unitPlural: "years"
-    });
+    const desc = this.describeField(
+      year,
+      { unitSingular: locale.tokens.year, unitPlural: locale.tokens.years },
+      locale
+    );
     if (!desc) return "";
-    if (desc.startsWith("every") || desc.startsWith("from")) return desc;
-    return `in ${desc}`;
+    if (this.isStepOrRange(desc, locale)) return desc;
+    return `${locale.tokens.in} ${desc}`;
   }
 
-  private static resolveValue(val: string, config: any): string {
-    if (config.isDow) {
-      if (val.endsWith("L")) {
-        const day = val.slice(0, -1);
-        return `last ${this.resolveValue(day, config)}`;
-      }
-      if (val.includes("#")) {
-        const [day, nth] = val.split("#");
-        const nthStr = this.ordinalSuffix(Number(nth));
-        return `${nthStr} ${this.resolveValue(day, config)}`;
-      }
-      let dowVal = val.toUpperCase();
-      const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-      const aliasIndex = dayNames.indexOf(dowVal);
-      let index = aliasIndex !== -1 ? aliasIndex : Number(val);
-      if (index === 7) index = 0;
-      return config.nameMap ? config.nameMap[index] || val : val;
-    }
-
-    if (config.isDom) {
-      if (val === "L") return "last day";
-      if (val === "LW") return "last weekday";
-      if (val.endsWith("W")) {
-        const day = val.slice(0, -1);
-        return `nearest weekday to the ${this.resolveValue(day, config)}`;
-      }
-      if (val.startsWith("L-")) {
-        const offset = val.slice(2);
-        return `${offset} days before the last day`;
-      }
-      return this.ordinalSuffix(Number(val));
-    }
-
-    if (config.nameMap) {
-      let mVal = val.toUpperCase();
-      const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-      const aliasIndex = monthNames.indexOf(mVal);
-      let index = aliasIndex !== -1 ? aliasIndex : Number(val) - 1;
-      return config.nameMap[index] || val;
-    }
-
-    return val;
-  }
-
-  private static describeField(value: string, config: any): string {
+  private static describeField(value: string, config: FieldConfig, locale: CronLocale): string {
     if (value === "*" || value === "?") return "";
 
     const parts = value.split(",");
-    const descriptions = parts.map(part => {
+    const descriptions = parts.map((part) => {
       if (part.includes("/")) {
         const [start, step] = part.split("/");
         const stepNum = Number(step);
         const unit = stepNum === 1 ? config.unitSingular : config.unitPlural;
         if (start === "*" || start === "0") {
-          return `every ${step} ${unit}`;
-        } else {
-          const startDesc = this.resolveValue(start, config);
-          return `every ${step} ${unit} starting from ${startDesc}`;
+          return `${locale.tokens.every} ${step} ${unit}`;
         }
+        const startDesc = this.resolveValue(start, config, locale);
+        return `${locale.tokens.every} ${step} ${unit} ${locale.tokens.startingFrom} ${startDesc}`;
       }
       if (part.includes("-")) {
         const [start, end] = part.split("-");
-        const startDesc = this.resolveValue(start, config);
-        const endDesc = this.resolveValue(end, config);
-        return `from ${startDesc} to ${endDesc}`;
+        return `${locale.tokens.from} ${this.resolveValue(start, config, locale)} ${locale.tokens.to} ${this.resolveValue(end, config, locale)}`;
       }
-      return this.resolveValue(part, config);
+      return this.resolveValue(part, config, locale);
     });
 
-    if (descriptions.length === 1) {
-      return descriptions[0];
-    } else if (descriptions.length === 2) {
-      return `${descriptions[0]} and ${descriptions[1]}`;
-    } else {
-      return `${descriptions.slice(0, -1).join(", ")}, and ${descriptions[descriptions.length - 1]}`;
+    if (descriptions.length === 1) return descriptions[0];
+    if (descriptions.length === 2) {
+      return `${descriptions[0]} ${locale.tokens.and} ${descriptions[1]}`;
     }
-  }
-
-  private static ordinalSuffix(i: number): string {
-    if (isNaN(i) || i <= 0) return "Invalid day";
-    const j = i % 10;
-    const k = i % 100;
-    if (j === 1 && k !== 11) return i + "st";
-    if (j === 2 && k !== 12) return i + "nd";
-    if (j === 3 && k !== 13) return i + "rd";
-    return i + "th";
-  }
-
-  private static combineDescriptions(descriptions: string[]): string {
-    const filteredDescriptions = descriptions.filter(
-      (part) => part && part !== ""
+    return (
+      descriptions.slice(0, -1).join(locale.tokens.listSeparator) +
+      locale.tokens.listFinalSeparator +
+      descriptions[descriptions.length - 1]
     );
-    return filteredDescriptions.length > 0
-      ? filteredDescriptions.join(" ").trim()
-      : "Every moment";
+  }
+
+  private static resolveValue(val: string, config: FieldConfig, locale: CronLocale): string {
+    if (config.isDow) {
+      if (val.endsWith("L")) {
+        return `${locale.tokens.last} ${this.resolveValue(val.slice(0, -1), config, locale)}`;
+      }
+      if (val.includes("#")) {
+        const [day, nth] = val.split("#");
+        return `${locale.ordinal(Number(nth))} ${this.resolveValue(day, config, locale)}`;
+      }
+      const aliasIndex = DOW_SHORT_ALIASES.indexOf(val.toUpperCase());
+      let index = aliasIndex !== -1 ? aliasIndex : Number(val);
+      if (index === 7) index = 0;
+      return locale.dayNames[index] ?? val;
+    }
+
+    if (config.isDom) {
+      if (val === "L") return locale.tokens.lastDay;
+      if (val === "LW") return locale.tokens.lastWeekday;
+      if (val.endsWith("W")) {
+        return `${locale.tokens.nearestWeekdayTo} ${this.resolveValue(val.slice(0, -1), config, locale)}`;
+      }
+      if (val.startsWith("L-")) {
+        return `${val.slice(2)} ${locale.tokens.daysBeforeLastDay}`;
+      }
+      return locale.ordinal(Number(val));
+    }
+
+    if (config.isMonth) {
+      const aliasIndex = MONTH_SHORT_ALIASES.indexOf(val.toUpperCase());
+      const index = aliasIndex !== -1 ? aliasIndex : Number(val) - 1;
+      return locale.monthNames[index] ?? val;
+    }
+
+    return val;
+  }
+
+  private static combineDescriptions(descriptions: string[], locale: CronLocale): string {
+    const filtered = descriptions.filter(Boolean);
+    return filtered.length > 0 ? filtered.join(" ").trim() : locale.tokens.everyMoment;
+  }
+
+  private static isStepOrRange(desc: string, locale: CronLocale): boolean {
+    const lower = desc.toLowerCase();
+    return (
+      lower.startsWith(locale.tokens.every.toLowerCase()) ||
+      lower.startsWith(locale.tokens.from.toLowerCase())
+    );
+  }
+
+  private static capitalize(s: string): string {
+    return s.charAt(0).toUpperCase() + s.slice(1);
   }
 }

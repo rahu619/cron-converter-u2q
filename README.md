@@ -156,13 +156,48 @@ CronDescriberU2Q.describeUnix('30 14 * * *', { use24HourTimeFormat: true });
 
 ### Next Runs
 
-`getNextRuns(expression, count, fromDate?)` returns the next matching run times as `Date` objects.
+`getNextRuns(expression, count, fromDate?, options?)` returns the next matching run times as `Date` objects.
+
+`getPreviousRuns(expression, count, fromDate?, options?)` returns the previous matching run times.
+
+Both accept an `options` object with `locale` and/or `timezone`:
+
+- `locale` — a registered locale ID or a `CronLocale` object. Its `timezone` field is used automatically.
+- `timezone` — an IANA timezone name. Overrides the locale's timezone when both are set.
 
 ```typescript
-import { getNextRuns } from 'cron-converter-u2q';
+import { getNextRuns, getPreviousRuns, loadLocale } from 'cron-converter-u2q';
 
-const nextRuns = getNextRuns('*/15 * * * *', 3);
-const dailyRuns = getNextRuns('@daily', 2, new Date('2026-01-01T12:00:00Z'));
+// Load a locale that includes timezone: "Europe/Berlin"
+await loadLocale('./locales/de.json');
+
+// Locale drives both language (for describer) and timezone (for run times)
+getNextRuns('0 9 * * *', 1, new Date(), { locale: 'de' });
+getNextRuns('@daily',    2, new Date(), { locale: 'de' });
+
+// Or pass timezone directly (no locale required)
+getNextRuns('0 9 * * *', 1, new Date(), { timezone: 'America/New_York' });
+
+// Both: timezone overrides the locale's built-in timezone
+getNextRuns('0 9 * * *', 1, new Date(), { locale: 'de', timezone: 'UTC' });
+
+const previousRuns = getPreviousRuns('*/15 * * * *', 3, new Date(), { locale: 'de' });
+```
+
+### Descriptions (i18n)
+
+`CronDescriberU2Q` supports multiple languages via the `locale` option. The only built-in locale is `en` (English). For any other language, use `registerLocale` — see the [Custom Locales](#custom-locales) section below.
+
+```typescript
+import { CronDescriberU2Q } from 'cron-converter-u2q';
+
+// English (default)
+CronDescriberU2Q.describeUnix('0 9 * * 1-5');
+// "At 9:00 AM from Monday to Friday"
+
+// 24-hour format
+CronDescriberU2Q.describeUnix('0 9 * * 1-5', { use24HourTimeFormat: true });
+// "At 09:00 from Monday to Friday"
 ```
 
 ### CLI
@@ -188,9 +223,10 @@ npx cron-converter-u2q "@daily"
 ## Limitations
 
 * This library converts and describes cron expressions. It does not schedule jobs.
-* `getNextRuns` uses the local JavaScript `Date` API and does not accept a timezone option.
+* `getNextRuns` and `getPreviousRuns` use the native `Intl` API for timezone conversion; timezone accuracy depends on the runtime's IANA timezone database.
 * Quartz-only day modifiers such as `L`, `W`, and `#` are preserved when converting Quartz to Quartz-compatible outputs, but not all of them have Unix equivalents.
 * Input validation follows the supported Unix and Quartz field rules in this package.
+* Built-in description locales are limited to `en` (English). Other languages can be added via `registerLocale` or `loadLocale`, and may include a `timezone` field so one locale object governs both language and clock offset.
 
 ## Examples
 
@@ -205,6 +241,120 @@ npx cron-converter-u2q "@daily"
 * `0 0 12 ? * 2#1 *` - at 12:00 PM on the first Monday of every month
 * `0 0 0 L * ? *` - at midnight on the last day of every month
 * `0 15 10 ? * 6L *` - at 10:15 AM on the last Friday of every month
+
+## Custom Locales
+
+The only built-in locale is `en` (English). For any other language, load a locale from a JSON file or provide an inline object.
+
+### Loading from a JSON file (Node.js)
+
+`loadLocale(filePath, localeId?)` reads a locale JSON file from disk, compiles it, and registers it. Call it once at startup.
+
+```typescript
+import { loadLocale, CronDescriberU2Q } from 'cron-converter-u2q';
+
+// Load and register — locale id comes from the "id" field in the file
+await loadLocale('./locales/de.json');
+
+// Or override the locale ID (useful for regional variants)
+await loadLocale('./locales/de.json', 'de-AT');
+
+// Then use it anywhere by the registered id
+CronDescriberU2Q.describeUnix('*/5 * * * *', { locale: 'de' });  // "Jede 5 Minuten"
+CronDescriberU2Q.describeUnix('0 0 * * *',   { locale: 'de' });  // "Um Mitternacht"
+```
+
+The JSON file (`de.json`) must conform to the `CronLocaleJSON` shape exported by the package. All `tokens` keys are required. Ordinals are expressed via the optional `ordinalSuffix` field — omitting it produces bare numbers. The optional `timezone` field is the IANA timezone used by `getNextRuns`/`getPreviousRuns` when this locale is passed.
+
+```json
+{
+  "id": "de",
+  "ordinalSuffix": ".",
+  "use24HourTimeFormat": true,
+  "timezone": "Europe/Berlin",
+  "dayNames": ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"],
+  "monthNames": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+  "tokens": {
+    "at": "Um",
+    "every": "jede",
+    "from": "von",
+    "to": "bis",
+    "and": "und",
+    "in": "im",
+    "on": "am",
+    "onThe": "am",
+    "ofTheMonth": "des Monats",
+    "last": "letzten",
+    "lastDay": "letzten Tag",
+    "lastWeekday": "letzten Werktag",
+    "nearestWeekdayTo": "nächsten Werktag zum",
+    "daysBeforeLastDay": "Tage vor dem letzten Tag",
+    "midnight": "Um Mitternacht",
+    "noon": "Um Mittag",
+    "am": "AM",
+    "pm": "PM",
+    "everyMoment": "Jederzeit",
+    "everyHour": "Jede Stunde",
+    "everyMinuteOfPrefix": "Jede Minute von",
+    "atSecond": "In Sekunde",
+    "atMinute": "In Minute",
+    "startingFrom": "beginnend ab",
+    "invalidDay": "Ungültiger Tag",
+    "second": "Sekunde",
+    "seconds": "Sekunden",
+    "minute": "Minute",
+    "minutes": "Minuten",
+    "hour": "Stunde",
+    "hours": "Stunden",
+    "dayOfMonth": "Monatstag",
+    "daysOfMonth": "Monatstage",
+    "month": "Monat",
+    "months": "Monate",
+    "dayOfWeek": "Wochentag",
+    "daysOfWeek": "Wochentage",
+    "year": "Jahr",
+    "years": "Jahre",
+    "listSeparator": ", ",
+    "listFinalSeparator": " und "
+  }
+}
+```
+
+### Inline locale
+
+```typescript
+import { registerLocale, CronDescriberU2Q } from 'cron-converter-u2q';
+
+registerLocale({
+  id: 'de',
+  dayNames: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
+  monthNames: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'],
+  ordinal: (n) => `${n}.`,
+  use24HourTimeFormat: true,
+  tokens: {
+    at: 'Um', every: 'jede', from: 'von', to: 'bis', and: 'und',
+    in: 'im', on: 'am', onThe: 'am', ofTheMonth: 'des Monats',
+    last: 'letzten', lastDay: 'letzten Tag', lastWeekday: 'letzten Werktag',
+    nearestWeekdayTo: 'nächsten Werktag zum', daysBeforeLastDay: 'Tage vor dem letzten Tag',
+    midnight: 'Um Mitternacht', noon: 'Um Mittag', am: 'AM', pm: 'PM',
+    everyMoment: 'Jederzeit', everyHour: 'Jede Stunde', everyMinuteOfPrefix: 'Jede Minute von',
+    atSecond: 'In Sekunde', atMinute: 'In Minute', startingFrom: 'beginnend ab',
+    invalidDay: 'Ungültiger Tag',
+    second: 'Sekunde', seconds: 'Sekunden', minute: 'Minute', minutes: 'Minuten',
+    hour: 'Stunde', hours: 'Stunden', dayOfMonth: 'Monatstag', daysOfMonth: 'Monatstage',
+    month: 'Monat', months: 'Monate', dayOfWeek: 'Wochentag', daysOfWeek: 'Wochentage',
+    year: 'Jahr', years: 'Jahre', listSeparator: ', ', listFinalSeparator: ' und ',
+  },
+});
+
+CronDescriberU2Q.describeUnix('*/5 * * * *', { locale: 'de' }); // "Jede 5 Minuten"
+```
+
+The `CronLocale` and `CronLocaleJSON` types are exported for TypeScript users:
+
+```typescript
+import type { CronLocale, CronLocaleJSON } from 'cron-converter-u2q';
+```
 
 ## Feedback & Contributing
 
