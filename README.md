@@ -54,10 +54,10 @@ import { CronConverterU2Q, CronValidatorU2Q, CronDescriberU2Q } from 'cron-conve
 
 // Convert Unix to Quartz
 const quartz = CronConverterU2Q.unixToQuartz('*/15 * * * *');
-console.log(quartz); // "0 */15 * * * * *"
+console.log(quartz); // "0 */15 * * * ? *"
 
 // Unix macros are supported
-console.log(CronConverterU2Q.unixToQuartz('@daily'));   // "0 0 0 * * * *"
+console.log(CronConverterU2Q.unixToQuartz('@daily'));   // "0 0 0 * * ? *"
 console.log(CronConverterU2Q.unixToQuartz('@weekly'));  // "0 0 0 ? * 1 *"
 console.log(CronConverterU2Q.unixToQuartz('@monthly')); // "0 0 0 1 * ? *"
 
@@ -106,11 +106,22 @@ Quartz cron uses 6 or 7 fields:
 ```typescript
 import { CronConverterU2Q } from 'cron-converter-u2q';
 
-CronConverterU2Q.unixToQuartz('*/15 * * * *');   // "0 */15 * * * * *"
+CronConverterU2Q.unixToQuartz('*/15 * * * *');   // "0 */15 * * * ? *"
 CronConverterU2Q.unixToQuartz('0 12 * * 1');     // "0 0 12 ? * 2 *"
 CronConverterU2Q.quartzToUnix('0 0 8 * * ?');    // "0 8 * * *"
 CronConverterU2Q.quartzToUnix('0 */5 * ? * 2');  // "*/5 * * * 1"
 ```
+
+Conversion rules worth knowing:
+
+- `unixToQuartz` always emits exactly one `?` between day-of-month and
+  day-of-week, as the Quartz spec requires. When both Unix fields are `*`,
+  the day-of-week field becomes `?` (the schedule still runs every day).
+- Unix day-of-week ranges and steps that reach Sunday via the `7` alias
+  (e.g. `5-7`, `1/2`) are converted to the equivalent Quartz day sets.
+- `quartzToUnix` requires the Quartz second field to be `0`. Unix cron has
+  no second resolution, so any other value throws instead of silently
+  changing the schedule's frequency.
 
 #### @-Macro Support
 

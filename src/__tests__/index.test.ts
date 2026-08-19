@@ -14,22 +14,22 @@ import {
 describe("Unix2Quartz Conversion", () => {
   test("Every minute", () => {
     const result = converter.unixToQuartz("* * * * *");
-    expect(result).toBe("0 * * * * * *");
+    expect(result).toBe("0 * * * * ? *");
   });
 
   test("Every 5 minutes", () => {
     const result = converter.unixToQuartz("*/5 * * * *");
-    expect(result).toBe("0 */5 * * * * *");
+    expect(result).toBe("0 */5 * * * ? *");
   });
 
   test("Every hour at minute 30", () => {
     const result = converter.unixToQuartz("30 * * * *");
-    expect(result).toBe("0 30 * * * * *");
+    expect(result).toBe("0 30 * * * ? *");
   });
 
   test("Everyday at 12pm", () => {
     const result = converter.unixToQuartz("0 12 * * *");
-    expect(result).toBe("0 0 12 * * * *");
+    expect(result).toBe("0 0 12 * * ? *");
   });
 
   test("Every Monday at 12pm", () => {
@@ -53,7 +53,7 @@ describe("Unix2Quartz Conversion", () => {
 
   test("Every day at 2:30 AM", () => {
     const result = converter.unixToQuartz("30 2 * * *");
-    expect(result).toBe("0 30 2 * * * *");
+    expect(result).toBe("0 30 2 * * ? *");
   });
 
   test("Every Monday at 2:30 AM", () => {
@@ -63,12 +63,12 @@ describe("Unix2Quartz Conversion", () => {
 
   test("Every day at 1:00 AM and 1:00 PM", () => {
     const result = converter.unixToQuartz("0 1,13 * * *");
-    expect(result).toBe("0 0 1,13 * * * *");
+    expect(result).toBe("0 0 1,13 * * ? *");
   });
 
   test("Every 15 minutes", () => {
     const result = converter.unixToQuartz("*/15 * * * *");
-    expect(result).toBe("0 */15 * * * * *");
+    expect(result).toBe("0 */15 * * * ? *");
   });
 
   test("Last Friday of every month (invalid in Unix)", () => {
@@ -315,8 +315,8 @@ describe("Converter: deduplication of DOW values", () => {
 
 describe("ExpressionHelper whitespace robustness", () => {
   test("handles multiple spaces, tabs, and leading/trailing whitespace correctly", () => {
-    expect(converter.unixToQuartz("  0   12   *   *   *  ")).toBe("0 0 12 * * * *");
-    expect(converter.unixToQuartz("0\t12\t*\t*\t*")).toBe("0 0 12 * * * *");
+    expect(converter.unixToQuartz("  0   12   *   *   *  ")).toBe("0 0 12 * * ? *");
+    expect(converter.unixToQuartz("0\t12\t*\t*\t*")).toBe("0 0 12 * * ? *");
   });
 });
 
@@ -387,15 +387,15 @@ describe("@-macro support", () => {
   });
 
   test("@daily converts to quartz", () => {
-    expect(converter.unixToQuartz("@daily")).toBe("0 0 0 * * * *");
+    expect(converter.unixToQuartz("@daily")).toBe("0 0 0 * * ? *");
   });
 
   test("@midnight converts to quartz (alias for @daily)", () => {
-    expect(converter.unixToQuartz("@midnight")).toBe("0 0 0 * * * *");
+    expect(converter.unixToQuartz("@midnight")).toBe("0 0 0 * * ? *");
   });
 
   test("@hourly converts to quartz", () => {
-    expect(converter.unixToQuartz("@hourly")).toBe("0 0 * * * * *");
+    expect(converter.unixToQuartz("@hourly")).toBe("0 0 * * * ? *");
   });
 
   test("@reboot throws a clear error", () => {
@@ -415,8 +415,8 @@ describe("@-macro support", () => {
   });
 
   test("macro matching is case-insensitive", () => {
-    expect(converter.unixToQuartz("@DAILY")).toBe("0 0 0 * * * *");
-    expect(converter.unixToQuartz("@Daily")).toBe("0 0 0 * * * *");
+    expect(converter.unixToQuartz("@DAILY")).toBe("0 0 0 * * ? *");
+    expect(converter.unixToQuartz("@Daily")).toBe("0 0 0 * * ? *");
   });
 
   test("describeUnix handles @daily", () => {
@@ -618,6 +618,49 @@ describe("timezone support in getNextRuns", () => {
     // UTC has no offset, so 9:00 UTC = 9:00 UTC
     const withOverride = getNextRuns("0 9 * * *", 1, from, { locale: "de", timezone: "UTC" });
     expect(withOverride[0].toISOString()).toBe("2026-01-01T09:00:00.000Z");
+  });
+});
+
+describe("getNextRuns: sparse schedules and DST transitions", () => {
+  test("finds three leap-day runs across 4-year cycles", () => {
+    const runs = getNextRuns("0 0 29 2 *", 3, new Date("2026-01-01T00:00:00Z"), { timezone: "UTC" });
+    expect(runs.map((run) => run.toISOString())).toEqual([
+      "2028-02-29T00:00:00.000Z",
+      "2032-02-29T00:00:00.000Z",
+      "2036-02-29T00:00:00.000Z",
+    ]);
+  });
+
+  test("finds a yearly run months ahead with a timezone set", () => {
+    const runs = getNextRuns("0 0 1 3 *", 1, new Date("2026-06-01T00:00:00Z"), { timezone: "America/New_York" });
+    // 2027-03-01 is before the 2027 spring-forward, so New York is UTC-5
+    expect(runs[0].toISOString()).toBe("2027-03-01T05:00:00.000Z");
+  });
+
+  test("skips the non-existent wall time on DST spring-forward", () => {
+    // America/New_York springs forward on 2026-03-08: 02:30 never exists that day
+    const runs = getNextRuns("30 2 * * *", 2, new Date("2026-03-06T12:00:00Z"), { timezone: "America/New_York" });
+    expect(runs.map((run) => run.toISOString())).toEqual([
+      "2026-03-07T07:30:00.000Z", // Mar 7, 02:30 EST (UTC-5)
+      "2026-03-09T06:30:00.000Z", // Mar 9, 02:30 EDT (UTC-4); Mar 8 has no 02:30
+    ]);
+  });
+
+  test("keeps daily runs stable across DST fall-back", () => {
+    // America/New_York falls back on 2026-11-01; noon is unambiguous on both days
+    const runs = getNextRuns("0 12 * * *", 2, new Date("2026-10-31T12:00:00Z"), { timezone: "America/New_York" });
+    expect(runs.map((run) => run.toISOString())).toEqual([
+      "2026-10-31T16:00:00.000Z", // EDT (UTC-4)
+      "2026-11-01T17:00:00.000Z", // EST (UTC-5)
+    ]);
+  });
+
+  test("getPreviousRuns spans leap-day cycles too", () => {
+    const runs = getPreviousRuns("0 0 29 2 *", 2, new Date("2030-06-01T00:00:00Z"), { timezone: "UTC" });
+    expect(runs.map((run) => run.toISOString())).toEqual([
+      "2028-02-29T00:00:00.000Z",
+      "2024-02-29T00:00:00.000Z",
+    ]);
   });
 });
 
