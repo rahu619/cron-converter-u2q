@@ -1,7 +1,7 @@
 {
   "name": "cron-converter-u2q",
   "version": "1.7.0",
-  "description": "Converts cron expressions between unix and quartz formats",
+  "description": "Convert crontab expressions between Unix and Quartz formats — validate, describe in plain English, and compute next run times. Zero dependencies.",
   "main": "lib/index.js",
   "bin": {
     "cron-converter-u2q": "lib/cli.js"
@@ -27,18 +27,27 @@
   "author": "BitBundler <rahu619@gmail.com>",
   "keywords": [
     "cron",
+    "crontab",
+    "cronjob",
     "unix",
     "quartz",
+    "quartz-cron",
+    "quartz-scheduler",
+    "cron-to-quartz",
     "cron-expression",
     "cron-convert",
     "cron-converter",
+    "schedule",
     "scheduler",
+    "validate",
+    "description",
+    "human-readable",
+    "next-run",
     "aws-eventbridge",
     "azure-functions",
     "spring",
-    "description",
-    "human-readable",
-    "typescript"
+    "typescript",
+    "zero-dependencies"
   ],
   "engines": {
     "node": ">=18"

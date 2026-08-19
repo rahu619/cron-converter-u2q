@@ -8,25 +8,53 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](package.json)
 
-`cron-converter-u2q` is a TypeScript library for converting, validating, describing, and listing run times for cron expressions between Unix and Quartz formats.
+**What is cron-converter-u2q?** A zero-dependency TypeScript toolkit for cron expressions. It covers the four things a team usually needs when a schedule moves between systems, in one install:
 
-## Overview
+* **Convert** between 5-field Unix cron (`crontab`) and 6/7-field Quartz cron — in both directions
+* **Validate** expressions with field-level error messages
+* **Describe** schedules in plain English (or any locale you register)
+* **Compute** upcoming and past run times, with timezone support
 
-The package supports four common cron tasks:
+```mermaid
+flowchart LR
+    U["Unix cron<br/>*/15 * * * *"]
+    Q["Quartz cron<br/>0 */15 * * * ? *"]
+    U -- unixToQuartz --> Q
+    Q -- quartzToUnix --> U
+    U -.-> R["validate, describe,<br/>next run times"]
+    Q -.-> R
+```
 
-* convert Unix cron to Quartz cron
-* convert Quartz cron to Unix cron
-* validate and describe expressions
-* list upcoming run times
+Most cron libraries do exactly one of those jobs: `cronstrue` describes, `cron-parser` parses, `cron-to-quartz` converts one way. This one is the only package that converts **both directions** across the full Quartz dialect (`?`, `L`, `W`, `#`) plus `@daily`-style macros — while staying dependency-free.
 
-## Features
+## Try it right now
 
-* Conversion between standard 5-field Unix cron and 6/7-field Quartz cron
-* Validation with field-level error messages
-* English descriptions for Unix and Quartz expressions
-* `@` macro support for common Unix shorthands such as `@daily` and `@hourly`
-* `getNextRuns` for enumerating upcoming matches
-* Zero runtime dependencies
+The CLI ships with the package, so you can inspect any expression without installing:
+
+```bash
+npx cron-converter-u2q "*/15 * * * *"
+npx cron-converter-u2q "0 0 12 ? * 2#1 *" --count 2
+npx cron-converter-u2q "@daily"
+```
+
+One command prints the detected format, validity in both dialects, the converted expression, an English description, and the next run times.
+
+> [!TIP]
+> Use `--count <n>` to control how many next runs are printed (default 3), and `--from <ISO date>` to evaluate the schedule from a specific point in time.
+
+## Why cron-converter-u2q?
+
+| Capability | cron-converter-u2q | cronstrue | cron-parser | cron-to-quartz |
+| :--- | :-: | :-: | :-: | :-: |
+| Unix → Quartz conversion | ✅ | — | — | ✅ |
+| Quartz → Unix conversion | ✅ | — | — | — |
+| Human-readable descriptions | ✅ | ✅ | — | — |
+| Validation with field-level errors | ✅ | — | ✅ (Unix only) | — |
+| Next / previous run times | ✅ | — | ✅ | — |
+| Zero runtime dependencies | ✅ | ✅ | ✅ | ✅ |
+
+> [!NOTE]
+> The comparison reflects each package's published scope as of August 2026. If one of these projects has since added a capability, open an issue and this table will be updated.
 
 ## Installation
 
@@ -365,6 +393,39 @@ The `CronLocale` and `CronLocaleJSON` types are exported for TypeScript users:
 
 ```typescript
 import type { CronLocale, CronLocaleJSON } from 'cron-converter-u2q';
+```
+
+## Integrations
+
+Because this package speaks both cron dialects, it pairs well with platforms whose schedulers expect one or the other.
+
+### AWS EventBridge
+
+[EventBridge Scheduler](https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html) accepts a Quartz-derived cron format: six fields (`minutes hours day-of-month month day-of-week year`), day-of-week numbered `1-7` with `1 = SUN`, the same "one of day-of-month / day-of-week must be `?`" rule, and `L`, `W`, `#` support. The only difference from Quartz is the missing seconds field — so convert, then drop the leading seconds:
+
+```typescript
+import { CronConverterU2Q } from 'cron-converter-u2q';
+
+const quartz = CronConverterU2Q.unixToQuartz('0 9 * * 1-5'); // "0 0 9 ? * 2-6 *"
+const eventbridge = quartz.split(' ').slice(1).join(' ');    // "0 9 ? * 2-6 *"
+// Use as: cron(0 9 ? * 2-6 *)
+```
+
+> [!NOTE]
+> `unixToQuartz` output only contains values, lists, ranges, steps, `*`, and `?` — all valid in EventBridge expressions — so this works for any valid Unix input.
+
+### Spring
+
+Spring applications meet both cron dialects:
+
+* **`spring-boot-starter-quartz`** embeds the real Quartz scheduler, so `unixToQuartz` output can be used as-is.
+* **`@Scheduled(cron = "...")`** uses Spring's `CronExpression`: six fields starting with seconds, but day-of-week is numbered `0-7` with `0` and `7` meaning Sunday — like Unix, not like Quartz. To migrate a Quartz expression into `@Scheduled`, convert to Unix first, then prepend the seconds field:
+
+```typescript
+import { CronConverterU2Q } from 'cron-converter-u2q';
+
+const unix = CronConverterU2Q.quartzToUnix('0 0 12 ? * 2 *'); // "0 12 * * 1"
+const scheduled = `0 ${unix}`;                                 // "0 0 12 * * 1"
 ```
 
 ## Feedback & Contributing
