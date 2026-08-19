@@ -1,0 +1,10 @@
+# Files hidden from Qwen Code file discovery and @-mentions.
+# These are generated artifacts — reading them wastes the context window.
+
+lib/
+types/
+coverage/
+node_modules/
+package-lock.json
+.git/
+*.original.md

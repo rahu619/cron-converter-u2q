@@ -3,3 +3,21 @@ build
 dist
 docs
 coverage
+
+# OS
+.DS_Store
+
+# Env / secrets
+.env
+.env.*
+.npmrc
+
+# AI agent local state (shared config IS committed:
+# AGENTS.md, CLAUDE.md, QWEN.md, .claude/settings.json,
+# .claude/commands/, .qwen/settings.json, .qwenignore)
+.claude/settings.local.json
+.claude/local/
+.qwen/settings.local.json
+.qwen/tmp/
+.qwen/logs/
+*.original.md

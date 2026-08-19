@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(npm test -- :*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build)",
+      "Bash(npm ci)",
+      "Bash(npm install)",
+      "Bash(npx jest:*)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node lib/cli.js:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Read(//Users/rahulrajan/Documents/src/cron-converter-u2q/**)",
+      "Edit(//Users/rahulrajan/Documents/src/cron-converter-u2q/src/**)",
+      "Edit(//Users/rahulrajan/Documents/src/cron-converter-u2q/README.md)",
+      "Edit(//Users/rahulrajan/Documents/src/cron-converter-u2q/AGENTS.md)"
+    ],
+    "deny": [
+      "Bash(npm publish:*)",
+      "Bash(npm version:*)",
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(rm -rf:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./.npmrc)",
+      "Edit(//Users/rahulrajan/Documents/src/cron-converter-u2q/lib/**)",
+      "Edit(//Users/rahulrajan/Documents/src/cron-converter-u2q/coverage/**)",
+      "Edit(//Users/rahulrajan/Documents/src/cron-converter-u2q/.github/workflows/**)",
+      "Edit(//Users/rahulrajan/Documents/src/cron-converter-u2q/package-lock.json)"
+    ]
+  }
+}

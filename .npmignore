@@ -1,3 +1,11 @@
 .github/
 node_modules/
 coverage/
+
+# AI agent config — dev-only, never ship to npm
+.claude/
+.qwen/
+.qwenignore
+AGENTS.md
+CLAUDE.md
+QWEN.md
