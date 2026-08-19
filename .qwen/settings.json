@@ -1,0 +1,17 @@
+{
+  "tools": {
+    "autoAccept": false,
+    "exclude": []
+  },
+  "context": {
+    "fileName": [
+      "QWEN.md",
+      "AGENTS.md"
+    ],
+    "fileFiltering": {
+      "respectGitIgnore": true,
+      "enableRecursiveFileSearch": true
+    }
+  },
+  "$version": 4
+}
