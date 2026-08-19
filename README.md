@@ -15,14 +15,7 @@
 * **Describe** schedules in plain English (or any locale you register)
 * **Compute** upcoming and past run times, with timezone support
 
-```text
-                      unixToQuartz
-  Unix cron      ─────────────────────▶  Quartz cron
-  */15 * * * *   ◀─────────────────────  0 */15 * * * ? *
-                      quartzToUnix
-
-  Unix or Quartz  ──▶  validate · describe · next/previous run times
-```
+![Flow diagram: Unix cron and Quartz cron convert into each other in both directions; either format can also be validated, described in plain English, and turned into next or previous run times](https://raw.githubusercontent.com/rahu619/cron-converter-u2q/main/assets/cron-flow.svg)
 
 Most cron libraries do exactly one of those jobs: `cronstrue` describes, `cron-parser` parses, `cron-to-quartz` converts one way. This one is the only package that converts **both directions** across the full Quartz dialect (`?`, `L`, `W`, `#`) plus `@daily`-style macros — while staying dependency-free.
 
