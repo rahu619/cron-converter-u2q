@@ -9,6 +9,23 @@ and this project adheres to
 > This changelog was introduced retroactively with 1.7.0. Entries for earlier
 > releases are reconstructed from the git history and npm publish dates.
 
+## [2.0.0] - 2026-08-20
+
+### Changed
+
+- **Breaking:** the CLI binary was renamed from `cron-converter-u2q` to
+  `cron-u2q`. Scripts and CI that invoke the old command name need to be
+  updated; the library API is unchanged.
+- README rewritten in a warmer, example-first voice; the flow diagram now
+  shows where each cron dialect lives (crontab/CI vs Spring/Quartz/
+  EventBridge) and how to try the CLI with `npx`.
+
+### Fixed
+
+- Quick Start example now imports `getNextRuns` before using it.
+- Compatibility table no longer contradicts the documented timezone support
+  in `getNextRuns` / `getPreviousRuns`.
+
 ## [1.7.0] - 2026-08-19
 
 ### Fixed

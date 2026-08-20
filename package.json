@@ -1,10 +1,10 @@
 {
   "name": "cron-converter-u2q",
-  "version": "1.7.2",
+  "version": "2.0.0",
   "description": "Convert crontab expressions between Unix and Quartz formats — validate, describe in plain English, and compute next run times. Zero dependencies.",
   "main": "lib/index.js",
   "bin": {
-    "cron-converter-u2q": "lib/cli.js"
+    "cron-u2q": "lib/cli.js"
   },
   "module": "lib/esm/index.js",
   "types": "lib/index.d.ts",

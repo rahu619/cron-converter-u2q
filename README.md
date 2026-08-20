@@ -8,33 +8,55 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](package.json)
 
-**What is cron-converter-u2q?** A zero-dependency TypeScript toolkit for cron expressions. It covers the four things a team usually needs when a schedule moves between systems, in one install:
+Cron expressions are write-only code. Nobody glances at `0 0 12 ? * 2#1 *` and
+instantly knows it means "at noon, on the first Monday of every month" — you
+squint, count fields, and hope. It gets worse when two dialects are involved:
+Unix cron calls Sunday `0`, Quartz calls it `1`, and only one of them has ever
+heard of the `?` key. If you have ever carried a schedule from `crontab` into
+Spring, AWS EventBridge, or anything else that runs Quartz under the hood, you
+already know this is where schedules go to quietly misfire.
+
+**What is cron-converter-u2q?** A zero-dependency TypeScript toolkit for
+exactly that situation — a translator between the two cron dialects, plus the
+three jobs that always come with it:
 
 * **Convert** between 5-field Unix cron (`crontab`) and 6/7-field Quartz cron — in both directions
-* **Validate** expressions with field-level error messages
+* **Validate** expressions with error messages that name the offending field, instead of just "invalid"
 * **Describe** schedules in plain English (or any locale you register)
 * **Compute** upcoming and past run times, with timezone support
 
-![Flow diagram: Unix cron and Quartz cron convert into each other in both directions; either format can also be validated, described in plain English, and turned into next or previous run times](https://raw.githubusercontent.com/rahu619/cron-converter-u2q/main/assets/cron-flow.svg)
+![Flow diagram: Unix cron — the dialect of crontab and CI pipelines — and Quartz cron — the dialect of Spring, Quartz and AWS EventBridge — convert into each other in both directions; either format can also be validated, described in plain English, and turned into next or previous run times, from the library API or the cron-u2q CLI](https://raw.githubusercontent.com/rahu619/cron-converter-u2q/main/assets/cron-flow.svg)
 
-Most cron libraries do exactly one of those jobs: `cronstrue` describes, `cron-parser` parses, `cron-to-quartz` converts one way. This one is the only package that converts **both directions** across the full Quartz dialect (`?`, `L`, `W`, `#`) plus `@daily`-style macros — while staying dependency-free.
+Most cron libraries pick exactly one of those jobs: `cronstrue` describes,
+`cron-parser` parses, `cron-to-quartz` converts one way. This one does all
+four, in both directions, across the full Quartz dialect (`?`, `L`, `W`, `#`)
+plus `@daily`-style macros — and installs with zero dependencies.
 
 ## Try it right now
 
-The CLI ships with the package, so you can inspect any expression without installing:
+The fastest way to get a feel for the package is to throw an expression at its
+CLI. No install step — `npx` fetches it for you:
 
 ```bash
-npx cron-converter-u2q "*/15 * * * *"
-npx cron-converter-u2q "0 0 12 ? * 2#1 *" --count 2
-npx cron-converter-u2q "@daily"
+npx cron-u2q "*/15 * * * *"
+npx cron-u2q "0 0 12 ? * 2#1 *" --count 2
+npx cron-u2q "@daily"
 ```
 
-One command prints the detected format, validity in both dialects, the converted expression, an English description, and the next run times.
+One command prints the detected format, validity in both dialects, the
+converted expression, an English description, and the next run times —
+everything the library knows about your expression, in one glance.
 
 > [!TIP]
-> Use `--count <n>` to control how many next runs are printed (default 3), and `--from <ISO date>` to evaluate the schedule from a specific point in time.
+> Use `--count <n>` to control how many next runs are printed (default 3), and
+> `--from <ISO date>` to evaluate the schedule from a specific point in time.
+> The command used to be called `cron-converter-u2q`; it was renamed to
+> `cron-u2q` because it is shorter to type. Same package.
 
 ## Why cron-converter-u2q?
+
+Fair question — there are already some good cron packages out there. Here is
+an honest comparison of what each one covers:
 
 | Capability | cron-converter-u2q | cronstrue | cron-parser | cron-to-quartz |
 | :--- | :-: | :-: | :-: | :-: |
@@ -46,7 +68,9 @@ One command prints the detected format, validity in both dialects, the converted
 | Zero runtime dependencies | ✅ | ✅ | ✅ | ✅ |
 
 > [!NOTE]
-> The comparison reflects each package's published scope as of August 2026. If one of these projects has since added a capability, open an issue and this table will be updated.
+> The comparison reflects each package's published scope as of August 2026. If
+> one of these projects has since added a capability, open an issue and this
+> table will be updated.
 
 ## Installation
 
@@ -69,53 +93,64 @@ pnpm add cron-converter-u2q
 
 ## Quick Start
 
-```typescript
-import { CronConverterU2Q, CronValidatorU2Q, CronDescriberU2Q } from 'cron-converter-u2q';
+A tour of the four jobs in one file:
 
-// Convert Unix to Quartz
+```typescript
+import {
+  CronConverterU2Q,
+  CronValidatorU2Q,
+  CronDescriberU2Q,
+  getNextRuns,
+} from 'cron-converter-u2q';
+
+// 1. Convert Unix to Quartz
 const quartz = CronConverterU2Q.unixToQuartz('*/15 * * * *');
 console.log(quartz); // "0 */15 * * * ? *"
 
-// Unix macros are supported
+// Unix macros work too
 console.log(CronConverterU2Q.unixToQuartz('@daily'));   // "0 0 0 * * ? *"
 console.log(CronConverterU2Q.unixToQuartz('@weekly'));  // "0 0 0 ? * 1 *"
 console.log(CronConverterU2Q.unixToQuartz('@monthly')); // "0 0 0 1 * ? *"
 
-// Describe a schedule in plain English
+// 2. Describe a schedule in plain English
 console.log(CronDescriberU2Q.describeUnix('30 9 * * 1-5')); // "At 9:30 AM from Monday to Friday"
 console.log(CronDescriberU2Q.describeQuartz('0 0 12 ? * 2#1 *')); // "At noon on the 1st Monday of every month"
 
-// Use 24-hour format
+// Prefer 24-hour clocks? Say so.
 console.log(CronDescriberU2Q.describeUnix('30 14 * * *', { use24HourTimeFormat: true })); // "At 14:30"
 
-// List upcoming run times
+// 3. List upcoming run times
 const nextRuns = getNextRuns('*/15 * * * *', 3);
 console.log(nextRuns.map((date) => date.toISOString()));
 
-// Validate expressions
-const isValid = CronValidatorU2Q.isValidUnix('60 * * * *'); // false
+// 4. Validate before you ship
+const isValid = CronValidatorU2Q.isValidUnix('60 * * * *'); // false — there is no minute 60
 ```
 
 ## Supported Formats
 
 ### Unix Cron
 
-Unix cron uses 5 fields:
+The classic. Five fields:
 
 `minute hour day-of-month month day-of-week`
 
-- Day-of-week values are `0-7` in this package, where `0` and `7` represent Sunday.
+- Day-of-week values are `0-7` in this package, where both `0` and `7`
+  represent Sunday (cron has never quite made up its mind).
 - When both day-of-month and day-of-week are restricted, Unix uses OR semantics.
 
 ### Quartz Cron
 
-Quartz cron uses 6 or 7 fields:
+Six or seven fields, with seconds up front:
 
 `second minute hour day-of-month month day-of-week [year]`
 
-- Day-of-week values are `1-7`, where `1` is Sunday.
-- Quartz uses `?` to mark one of day-of-month or day-of-week as intentionally unspecified.
-- Quartz supports `L`, `W`, and `#` in the day fields.
+- Day-of-week values are `1-7`, where `1` is Sunday — one off from Unix, which
+  is exactly the kind of detail this library exists to absorb for you.
+- Quartz uses `?` to mark one of day-of-month or day-of-week as intentionally
+  unspecified.
+- Quartz supports `L`, `W`, and `#` in the day fields — last day of month,
+  nearest weekday, "the 2nd Friday", and friends.
 
 ## API Reference
 
@@ -233,13 +268,18 @@ CronDescriberU2Q.describeUnix('0 9 * * 1-5', { use24HourTimeFormat: true });
 
 ### CLI
 
-The package also ships a CLI for quick checks.
+The package ships a CLI named `cron-u2q` for the "I just need to check one
+expression" moments:
 
 ```bash
-npx cron-converter-u2q "*/15 * * * *"
-npx cron-converter-u2q "0 0 12 ? * 2#1 *" --count 2
-npx cron-converter-u2q "@daily"
+npx cron-u2q "*/15 * * * *"
+npx cron-u2q "0 0 12 ? * 2#1 *" --count 2
+npx cron-u2q "@daily"
 ```
+
+Options: `-n, --count <number>`, `--from <date>`, `-h, --help`. Run
+`npx cron-u2q --help` for the full list. If the package is already installed
+in your project, the same command is available without `npx`.
 
 ## Compatibility
 
@@ -249,7 +289,7 @@ npx cron-converter-u2q "@daily"
 | CommonJS | Yes |
 | ESM | Yes |
 | Browser builds via bundlers | Yes |
-| Timezone-aware scheduling | No |
+| Timezone-aware run times | Yes, via the runtime's `Intl` API |
 
 ## Limitations
 
@@ -260,6 +300,8 @@ npx cron-converter-u2q "@daily"
 * Built-in description locales are limited to `en` (English). Other languages can be added via `registerLocale` or `loadLocale`, and may include a `timezone` field so one locale object governs both language and clock offset.
 
 ## Examples
+
+Some expressions worth keeping in your back pocket:
 
 ### Unix Cron
 
@@ -422,7 +464,10 @@ const scheduled = `0 ${unix}`;                                 // "0 0 12 * * 1"
 
 ## Feedback & Contributing
 
-Issues and pull requests are welcome. If you find a bug or have a feature request, please open a GitHub issue.
+Issues and pull requests are welcome. If something converts wrongly, describes
+awkwardly, or blows up unexpectedly, open an issue — that is how this package
+gets better. If it saved you some pain, a star on GitHub helps other people
+find it.
 
 ## License
 
