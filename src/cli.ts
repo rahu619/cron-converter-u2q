@@ -121,7 +121,7 @@ function parseArguments(args: string[]): CliOptions {
 }
 
 function printHelp(): void {
-  console.log(`Usage: cron-converter-u2q <expression> [options]
+  console.log(`Usage: cron-u2q <expression> [options]
 
 Options:
   -n, --count <number>   Number of next runs to print (default: 3)
@@ -129,9 +129,9 @@ Options:
   -h, --help             Show this help message
 
 Examples:
-  npx cron-converter-u2q "*/15 * * * *"
-  npx cron-converter-u2q "0 0 12 ? * 2#1 *"
-  npx cron-converter-u2q "@daily" --count 5`);
+  npx cron-u2q "*/15 * * * *"
+  npx cron-u2q "0 0 12 ? * 2#1 *"
+  npx cron-u2q "@daily" --count 5`);
 }
 
 main();
