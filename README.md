@@ -12,13 +12,13 @@ Cron expressions are write-only code. Nobody glances at `0 0 12 ? * 2#1 *` and
 instantly knows it means "at noon, on the first Monday of every month" — you
 squint, count fields, and hope. It gets worse when two dialects are involved:
 Unix cron calls Sunday `0`, Quartz calls it `1`, and only one of them has ever
-heard of the `?` key. If you have ever carried a schedule from `crontab` into
+heard of the `?` key. If you've ever carried a schedule from `crontab` into
 Spring, AWS EventBridge, or anything else that runs Quartz under the hood, you
 already know this is where schedules go to quietly misfire.
 
-**What is cron-converter-u2q?** A zero-dependency TypeScript toolkit for
-exactly that situation — a translator between the two cron dialects, plus the
-three jobs that always come with it:
+That's the gap cron-converter-u2q fills — a zero-dependency TypeScript
+toolkit that translates between the two cron dialects, plus the three jobs
+that always tag along:
 
 * **Convert** between 5-field Unix cron (`crontab`) and 6/7-field Quartz cron — in both directions
 * **Validate** expressions with error messages that name the offending field, instead of just "invalid"
@@ -34,8 +34,8 @@ plus `@daily`-style macros — and installs with zero dependencies.
 
 ## Try it right now
 
-The fastest way to get a feel for the package is to throw an expression at its
-CLI. No install step — `npx` fetches it for you:
+The fastest way to get a feel for the package is throwing an expression at its
+CLI — no install step, `npx` fetches it for you:
 
 ```bash
 npx cron-u2q "*/15 * * * *"
@@ -45,18 +45,18 @@ npx cron-u2q "@daily"
 
 One command prints the detected format, validity in both dialects, the
 converted expression, an English description, and the next run times —
-everything the library knows about your expression, in one glance.
+everything the library knows about your expression, at a glance.
 
 > [!TIP]
 > Use `--count <n>` to control how many next runs are printed (default 3), and
 > `--from <ISO date>` to evaluate the schedule from a specific point in time.
 > The command used to be called `cron-converter-u2q`; it was renamed to
-> `cron-u2q` because it is shorter to type. Same package.
+> `cron-u2q` because it's shorter to type. Same package.
 
 ## Why cron-converter-u2q?
 
-Fair question — there are already some good cron packages out there. Here is
-an honest comparison of what each one covers:
+Fair question — there are already good cron packages out there; none of them
+covers the whole problem. Here's what each one does:
 
 | Capability | cron-converter-u2q | cronstrue | cron-parser | cron-to-quartz |
 | :--- | :-: | :-: | :-: | :-: |
@@ -68,32 +68,23 @@ an honest comparison of what each one covers:
 | Zero runtime dependencies | ✅ | ✅ | ✅ | ✅ |
 
 > [!NOTE]
-> The comparison reflects each package's published scope as of August 2026. If
-> one of these projects has since added a capability, open an issue and this
-> table will be updated.
+> The comparison reflects each package's published scope as of August 2026.
+> If one of them has since grown a capability, open an issue and the table
+> gets updated.
 
 ## Installation
 
-Install the package via your preferred package manager:
+npm, Yarn, or pnpm — take your pick:
 
-### npm
 ```bash
-npm install cron-converter-u2q
-```
-
-### Yarn
-```bash
-yarn add cron-converter-u2q
-```
-
-### pnpm
-```bash
-pnpm add cron-converter-u2q
+npm install cron-converter-u2q    # npm
+yarn add cron-converter-u2q       # yarn
+pnpm add cron-converter-u2q       # pnpm
 ```
 
 ## Quick Start
 
-A tour of the four jobs in one file:
+All four jobs, one file:
 
 ```typescript
 import {
@@ -156,7 +147,8 @@ Six or seven fields, with seconds up front:
 
 ### Conversion
 
-`CronConverterU2Q` provides static methods for bidirectional conversion.
+`CronConverterU2Q` converts between both dialects — static methods, nothing
+to instantiate:
 
 ```typescript
 import { CronConverterU2Q } from 'cron-converter-u2q';
@@ -180,7 +172,8 @@ Conversion rules worth knowing:
 
 #### @-Macro Support
 
-Standard Unix macros are accepted by `unixToQuartz`, `validateUnix`, `isValidUnix`, and `describeUnix`.
+The standard Unix macros are first-class — `unixToQuartz`, `validateUnix`,
+`isValidUnix`, and `describeUnix` all accept them.
 
 | Macro | Expands to |
 | :--- | :--- |
@@ -192,7 +185,9 @@ Standard Unix macros are accepted by `unixToQuartz`, `validateUnix`, `isValidUni
 
 ### Validation
 
-`CronValidatorU2Q` validates Unix and Quartz expressions and returns detailed field errors.
+`CronValidatorU2Q` checks both dialects. The `isValid*` methods answer
+yes-or-no; the `validate*` methods throw — and the error names the field that
+broke:
 
 ```typescript
 import { CronValidatorU2Q } from 'cron-converter-u2q';
@@ -209,7 +204,7 @@ try {
 
 ### Description
 
-`CronDescriberU2Q` converts expressions into English descriptions.
+`CronDescriberU2Q` turns expressions into plain sentences:
 
 ```typescript
 import { CronDescriberU2Q } from 'cron-converter-u2q';
@@ -252,7 +247,9 @@ const previousRuns = getPreviousRuns('*/15 * * * *', 3, new Date(), { locale: 'd
 
 ### Descriptions (i18n)
 
-`CronDescriberU2Q` supports multiple languages via the `locale` option. The only built-in locale is `en` (English). For any other language, use `registerLocale` — see the [Custom Locales](#custom-locales) section below.
+Descriptions are locale-driven — pass the `locale` option and the wording
+follows. Only `en` (English) ships built in; for anything else, register a
+locale (see [Custom Locales](#custom-locales) below).
 
 ```typescript
 import { CronDescriberU2Q } from 'cron-converter-u2q';
@@ -278,8 +275,8 @@ npx cron-u2q "@daily"
 ```
 
 Options: `-n, --count <number>`, `--from <date>`, `-h, --help`. Run
-`npx cron-u2q --help` for the full list. If the package is already installed
-in your project, the same command is available without `npx`.
+`npx cron-u2q --help` for the full list — and if the package is already
+installed in your project, drop the `npx`.
 
 ## Compatibility
 
@@ -293,11 +290,11 @@ in your project, the same command is available without `npx`.
 
 ## Limitations
 
-* This library converts and describes cron expressions. It does not schedule jobs.
-* `getNextRuns` and `getPreviousRuns` use the native `Intl` API for timezone conversion; timezone accuracy depends on the runtime's IANA timezone database.
-* Quartz-only day modifiers such as `L`, `W`, and `#` are preserved when converting Quartz to Quartz-compatible outputs, but not all of them have Unix equivalents.
-* Input validation follows the supported Unix and Quartz field rules in this package.
-* Built-in description locales are limited to `en` (English). Other languages can be added via `registerLocale` or `loadLocale`, and may include a `timezone` field so one locale object governs both language and clock offset.
+* This library converts and describes cron expressions — it does not schedule jobs.
+* `getNextRuns` and `getPreviousRuns` lean on the native `Intl` API for timezone work, so accuracy is only as good as the runtime's IANA timezone database.
+* Quartz-only day modifiers — `L`, `W`, `#` — have no Unix equivalent, so `quartzToUnix` throws on them rather than guessing at a substitute.
+* Validation enforces the Unix and Quartz field rules this package supports — nothing more exotic.
+* Descriptions ship in `en` (English) only; register another language with `registerLocale` or `loadLocale`, optionally carrying a `timezone` so one locale governs both wording and clock offset.
 
 ## Examples
 
@@ -317,7 +314,8 @@ Some expressions worth keeping in your back pocket:
 
 ## Custom Locales
 
-The only built-in locale is `en` (English). For any other language, load a locale from a JSON file or provide an inline object.
+Only `en` ships built in. Any other language starts life as a locale object —
+either load one from a JSON file or pass it inline.
 
 ### Loading from a JSON file (Node.js)
 
@@ -465,9 +463,9 @@ const scheduled = `0 ${unix}`;                                 // "0 0 12 * * 1"
 ## Feedback & Contributing
 
 Issues and pull requests are welcome. If something converts wrongly, describes
-awkwardly, or blows up unexpectedly, open an issue — that is how this package
-gets better. If it saved you some pain, a star on GitHub helps other people
-find it.
+awkwardly, or blows up unexpectedly, open an issue — that's how this package
+gets better. And if it saved you some pain, a star on GitHub helps other
+people find it.
 
 ## License
 
