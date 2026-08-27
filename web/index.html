@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cron-u2q — Unix ⇄ Quartz cron playground</title>
+    <meta
+      name="description"
+      content="Convert cron expressions between Unix and Quartz formats, get a plain-English description, and preview the next run times."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏰</text></svg>"
+    />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>cron-u2q</h1>
+        <p class="tagline">
+          Convert <strong>Unix</strong> ⇄ <strong>Quartz</strong> cron expressions, see what they
+          mean in plain English, and preview when they fire.
+        </p>
+      </header>
+
+      <section class="panels">
+        <div class="field">
+          <label for="unix-input">
+            Unix cron
+            <span class="hint">minute&nbsp;hour&nbsp;day&nbsp;month&nbsp;weekday</span>
+          </label>
+          <input
+            id="unix-input"
+            type="text"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+            placeholder="0 9 * * 1-5"
+          />
+          <p class="error" id="unix-error" hidden></p>
+          <div class="examples" id="unix-examples" aria-label="Unix examples">
+            <span class="examples-label">Try:</span>
+          </div>
+        </div>
+
+        <div class="swap" aria-hidden="true">⇄</div>
+
+        <div class="field">
+          <label for="quartz-input">
+            Quartz cron
+            <span class="hint">sec&nbsp;minute&nbsp;hour&nbsp;day&nbsp;month&nbsp;weekday&nbsp;[year]</span>
+          </label>
+          <input
+            id="quartz-input"
+            type="text"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+            placeholder="0 0 9 ? * MON-FRI"
+          />
+          <p class="error" id="quartz-error" hidden></p>
+          <div class="examples" id="quartz-examples" aria-label="Quartz examples">
+            <span class="examples-label">Try:</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="output" id="output">
+        <div>
+          <h2>Description <span class="badge" id="active-badge" hidden></span></h2>
+          <p class="description" id="description">Type a cron expression above.</p>
+        </div>
+        <div>
+          <h2>
+            Next 3 runs
+            <span class="hint" id="timezone"></span>
+          </h2>
+          <ol id="next-runs"></ol>
+        </div>
+      </section>
+
+      <footer>
+        Powered by
+        <a href="https://www.npmjs.com/package/cron-converter-u2q" target="_blank" rel="noopener"
+          >cron-converter-u2q</a
+        >
+        ·
+        <a href="https://github.com/rahu619/cron-converter-u2q" target="_blank" rel="noopener"
+          >GitHub</a
+        >
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

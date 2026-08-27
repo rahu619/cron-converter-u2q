@@ -1,0 +1,19 @@
+{
+  "name": "cron-u2q-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Web playground for cron-converter-u2q — convert Unix ↔ Quartz cron expressions, read a plain-English description, and preview next run times.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "cron-converter-u2q": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.6",
+    "vite": "^7.0.0"
+  }
+}

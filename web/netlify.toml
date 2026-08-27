@@ -1,0 +1,10 @@
+# Netlify configuration. Set the site's "Base directory" to `web` so Netlify
+# picks this file up; build command and publish dir below are then relative to it.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 7 requires Node ^20.19.0 || >=22.12.0.
+  NODE_VERSION = "22"
