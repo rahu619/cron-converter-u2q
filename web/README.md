@@ -43,6 +43,20 @@ npm run preview    # serve the production build locally
 
 The app is fully static (`npm run build` → `web/dist/`) and pulls
 `cron-converter-u2q` from npm, so there is no workspace wiring to configure.
+`vite.config.ts` sets `base: './'`, so the build works from any subpath —
+including GitHub Pages' project-page URL — without further changes.
+
+### GitHub Pages (no external account needed)
+
+`.github/workflows/pages.yml` builds this folder and publishes it to GitHub
+Pages on every push to `main`. One-time setup in the repo:
+
+1. **Settings → Pages → Source** → choose **GitHub Actions**.
+2. Push (or use **Actions → Deploy web playground → Run workflow**).
+
+The site lands at `https://rahu619.github.io/cron-converter-u2q/`. The
+relative asset base means the hashed `dist/` files resolve correctly under the
+project subpath.
 
 ### Vercel
 
@@ -57,6 +71,6 @@ The app is fully static (`npm run build` → `web/dist/`) and pulls
 2. `netlify.toml` in this folder supplies the build command, publish dir
    (`dist`), and Node version — no extra configuration needed.
 
-Both hosts serve the single page at `/`; no SPA rewrites are required.
+Vercel and Netlify serve the single page at `/`; no SPA rewrites are required.
 
 [crontab.guru]: https://crontab.guru/
