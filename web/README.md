@@ -4,7 +4,9 @@ A tiny [crontab.guru]-style playground for
 [cron-converter-u2q](https://www.npmjs.com/package/cron-converter-u2q). Two
 boxes — Unix and Quartz — that stay in sync as you type, plus a plain-English
 description and the next three run times for whichever expression you're
-editing.
+editing. Ships with dark and light themes (defaults to your OS preference,
+toggle in the header), one-click copy buttons for both expressions, and
+relative countdowns next to each upcoming run.
 
 Built with [Vite](https://vite.dev/) and vanilla TypeScript; the only runtime
 dependency is the published `cron-converter-u2q` package itself.
@@ -37,7 +39,9 @@ npm run preview    # serve the production build locally
 - Invalid input shows the validator's field-level error message inline and
   keeps the last good results visible (dimmed).
 - Next runs are computed in the browser's local timezone (shown next to the
-  heading).
+  heading), each with a relative countdown.
+- The header toggle switches dark/light; the choice persists in
+  `localStorage`, and first visits follow `prefers-color-scheme`.
 
 ## Deploying
 
