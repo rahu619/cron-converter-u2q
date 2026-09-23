@@ -119,3 +119,7 @@ Copy `src/locales/en.ts` as the skeleton, register it in
   optional scope (`feat(locales): ...`).
 - Branch off `main`; do not commit or push unless asked.
 - Update `README.md` when the public API or CLI flags change.
+- **No AI tool attribution** in git metadata: no `Co-authored-by:` trailers
+  for copilot, qwen, claude, GPT, or any other AI tool; no branch names
+  containing AI tool names; no commits authored by AI bots. A `commit-msg`
+  hook enforces this locally.
